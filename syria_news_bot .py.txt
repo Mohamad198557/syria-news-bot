@@ -1,0 +1,32 @@
+score = score_news(title, summary, source_name)
+                    if score < 5:  # فلترة أعلى جودة
+                        continue
+                    
+                    # ترجمة وإرسال
+                    translated_title = translate_to_arabic(title)
+                    
+                    if send_to_telegram(translated_title, entry.link, summary, source_name):
+                        seen[today].add(link_hash)
+                        new_count += 1
+                    
+                    # تأخير للـ rate limiting
+                    time.sleep(2)
+                    
+                except Exception as e:
+                    logger.error(f"خطأ في معالجة خبر: {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"خطأ في feed {feed_url}: {e}")
+            continue
+    
+    # حفظ وتنظيف (احتفظ بـ7 أيام فقط)
+    if len(seen) > 7:
+        seen = dict(list(seen.items())[-7:])
+    
+    save_seen(seen)
+    logger.info(f"✅ انتهى الفحص: {new_count} خبر جديد اليوم")
+
+if name == "main":
+    logger.info("🚀 بدء بوت أخبار سوريا - 20 وكالة عالمية")
+    check_news()
