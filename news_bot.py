@@ -30,24 +30,23 @@ KEYWORDS_SYRIA = [
 
 # 🔥 20 وكالة أنباء شاملة
 RSS_FEEDS = [
-    "https://sana.sy/?feed=rss2", 
+    "https://sana.sy/?feed=rss2",
     "https://www.syria.tv/feed",
-    "https://alikhbariah.com/feed/", 
+    "https://alikhbariah.com/feed/",
     "https://syriasteps.com/feed/",
     "https://www.aljazeera.com/xml/rss/all.xml",
     "http://feeds.bbci.co.uk/news/world/rss.xml",
     "https://www.theguardian.com/world/rss",
     "https://www.nytimes.com/svc/collections/v1/publish/www.nytimes.com/section/world/rss.xml",
-    "https://www.aa.com.tr/ar/rss/default.aspx", 
+    "https://www.aa.com.tr/ar/rss/default.aspx",
     "https://trt.global/arabi/rss/",
-    "https://aawsat.com/rss-feed", 
+    "https://aawsat.com/rss-feed",
     "https://www.alaraby.co.uk/feed.xml",
-    "https://www.skynewsarabia.com/rss/world.xml", 
+    "https://www.skynewsarabia.com/rss/world.xml",
     "https://www.alalam.ir/rss",
-    "https://asharq.com/rss/feed/1/", 
+    "https://asharq.com/rss/feed/1/",
     "https://www.france24.com/en/rss",
-    "https://www.dw.com/en/rss-top-stories", 
-    "https://www.euronews.com/rss.xml",
+    "https://www.dw.com/en/rss-top-stories",
     "http://feeds.feedburner.com/time/world",
     "https://abcnews.go.com/abcnews/usheadlines",
     "https://www.wam.ae/ar/rss",
@@ -76,14 +75,12 @@ def get_gold_dollar_prices():
         if gold_matches:
             gold_price = gold_matches[0].replace(',', '')
             print(f"✅ ذهب من الموقع: {gold_price}")
-        
         if dollar_matches:
             dollar_price = dollar_matches[0].replace(',', '')
             print(f"✅ دولار من الموقع: {dollar_price}")
         
         print(f"💰 نهائي: ذهب {gold_price} | دولار {dollar_price}")
         return gold_price, dollar_price
-        
     except Exception as e:
         print(f"⚠️ أسعار افتراضية: {e}")
         return "1,484,000", "11,950"
@@ -96,17 +93,156 @@ def contains_syria_keyword(text):
 def get_source_name(url):
     """أسماء الوكالات الجميلة"""
     sources = {
-        "sana": "🇸🇾 سانا الرسمية", 
+        "sana": "🇸🇾 سانا الرسمية",
         "syria.tv": "📺 تلفزيون سوريا",
-        "alikhbariah": "📺 الإخبارية السورية", 
+        "alikhbariah": "📺 الإخبارية السورية",
         "syriasteps": "🇸🇾 سورياستيبس",
-        "aljazeera": "🟢 الجزيرة نت", 
+        "aljazeera": "🟢 الجزيرة نت",
         "bbc": "🔴 بي بي سي",
-        "guardian": "🟠 الغارديان", 
+        "guardian": "🟠 الغارديان",
         "aa.com.tr": "🇹🇷 الأناضول",
-        "skynewsarabia": "🔵 سكاي عربية", 
+        "skynewsarabia": "🔵 سكاي عربية",
         "aawsat": "🔷 الشرق الأوسط",
-        "france24": "🇫🇷 فرانس 24", 
+        "france24": "🇫🇷 فرانس 24",
         "dw.com": "🇩🇪 دويتشه فيله",
         "wam.ae": "🟢 وام الإمارات",
-        "bna.bh":
+        "bna.bh": "🟣 بنا البحرين",
+        "petra.gov.jo": "🟡 بترا الأردن",
+        "aps.dz": "🔵 واج الجزائر",
+        "saba.ye": "🔴 سبأ اليمن",
+        "spa.gov.sa": "⚫ واس السعودية",
+        "qna.org.qa": "🟤 قنا قطر",
+        "kuna.net.kw": "🟠 كونا الكويت",
+        "mapnews.ma": "🟢 ماف المغرب",
+        "ani.mr": "🟡 وما موريتانيا",
+        "suna-ed.org": "🔵 سونا السودان",
+        "omannews.gov.om": "🟣 عُمان",
+        "wafa.ps": "🟠 وفا فلسطين",
+        "wal.ps": "🔴 وال ليبيا",
+        "tapinfo.tn": "🟡 وات تونس",
+        "ina.iq": "⚫ واع العراق",
+        "mena.org.eg": "🟢 أ.ش.أ مصر"
+    }
+    return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة")
+
+def get_rss_news():
+    """20 وكالة مع فلترة ذكية"""
+    articles = []
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    
+    print("📰 فحص 20 وكالة أنباء...")
+    for i, url in enumerate(RSS_FEEDS, 1):
+        if i % 4 == 0:
+            print(f"   التقدم: {i}/{len(RSS_FEEDS)}")
+        
+        source_name = get_source_name(url)
+        print(f"[{i:2d}] {source_name}")
+        
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) NewsBot/9.0'}
+            r = requests.get(url, headers=headers, timeout=12)
+            r.raise_for_status()
+            
+            feed = feedparser.parse(r.content)
+            
+            for entry in feed.entries[:4]:
+                title = getattr(entry, 'title', '') or ''
+                summary = getattr(entry, 'summary', '') or getattr(entry, 'description', '') or ''
+                
+                full_text = f"{title} {summary}"
+                
+                if contains_syria_keyword(full_text):
+                    pub_date = None
+                    for date_field in ['published_parsed', 'updated_parsed', 'created_parsed']:
+                        if hasattr(entry, date_field):
+                            try:
+                                pub_date = datetime(*getattr(entry, date_field)[:6])
+                                break
+                            except:
+                                pass
+                    
+                    if pub_date and pub_date > cutoff:
+                        articles.append({
+                            'title': title[:125],
+                            'link': getattr(entry, 'link', ''),
+                            'source': source_name,
+                            'date': pub_date
+                        })
+                        print(f"    ✅ خبر سوري ✓")
+                        break
+        except Exception as e:
+            print(f"    ⏭️ خطأ: {str(e)[:50]}")
+        
+        time.sleep(0.7)
+    
+    return sorted(articles, key=lambda x: x['date'], reverse=True)
+
+def send_telegram(chat_id, message):
+    """إرسال آمن"""
+    if not BOT_TOKEN:
+        print("❌ BOT_TOKEN غير موجود!")
+        return False
+        
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    data = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True
+    }
+    try:
+        r = requests.post(url, data=data, timeout=15)
+        return r.status_code == 200
+    except Exception as e:
+        print(f"❌ خطأ إرسال: {e}")
+        return False
+
+def main():
+    print("🎯 بوت أخبار سوريا + الأسعار يعمل...")
+    
+    # 🔥 الأسعار أولاً
+    gold_price, dollar_price = get_gold_dollar_prices()
+    print(f"💰 ذهب: {gold_price} | دولار: {dollar_price}")
+    
+    # جمع الأخبار
+    articles = get_rss_news()
+    
+    # الرسالة الاحترافية
+    now_str = datetime.utcnow().strftime("%H:%M UTC")
+    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>\n\n"
+    
+    msg += f"<b>💰 السوق اليوم ({now_str}):</b>\n"
+    msg += f"🪙 <b>ذهب عيار 21:</b> {gold_price} ليرة\n"
+    msg += f"💵 <b>دولار:</b> {dollar_price} ليرة\n\n"
+    
+    msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>\n"
+    
+    if articles:
+        msg += "<b>📰 آخر الأخبار:</b>\n\n"
+        for i, article in enumerate(articles[:8], 1):
+            msg += f"{i}. <b>{article['title']}</b>\n"
+            msg += f"{article['source']}\n"
+            msg += f"<a href=\"{article['link']}\">🔗 الكامل</a>\n\n"
+    else:
+        msg += "<b>📭 لا أخبار سورية الـ 24 ساعة الأخيرة</b>\n\n"
+        msg += "🔍 تم فحص 20 وكالة أنباء عالمية وعربية\n"
+        msg += "🇸🇾 سانا + تلفزيون سوريا + الإخبارية"
+    
+    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    msg += "<b>تم تطويره بواسطة:</b>\n"
+    msg += "<b>محمد محمد جلال الخطيب</b>\n"
+    msg += "<b>طلاب كليات الإعلام || FMD</b>"
+    
+    # الإرسال
+    success_count = 0
+    for chat_id in TARGET_CHATS:
+        if send_telegram(chat_id, msg):
+            success_count += 1
+            print(f"📱 نجح: {chat_id}")
+        else:
+            print(f"📱 فشل: {chat_id}")
+    
+    print(f"\n🎉 النتيجة: {success_count}/2 وجهة | {len(articles)} خبر")
+
+if __name__ == "__main__":
+    main()
