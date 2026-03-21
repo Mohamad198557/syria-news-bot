@@ -226,7 +226,6 @@ def run_once():
     
     if new_articles:
         now_str = datetime.utcnow().strftime("%H:%M UTC")
-        
         message  = "<b>🇸🇾 أهم أخبار سوريا من 25 وكالة أنباء</b>\n\n"
         message += "<b>💰 السوق اليوم (" + now_str + "):</b>\n"
         message += "🪙 <b>ذهب عيار 21:</b> " + gold_price + " ليرة\n"
