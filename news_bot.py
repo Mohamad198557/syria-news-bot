@@ -68,8 +68,8 @@ RSS_FEEDS = [
 
 # 🔥 10 حسابات X رسمية سورية
 X_ACCOUNTS = [
-    {"user": "AH_AlSharaa", "name": "أحمد الشرع الرئيس"},
-    {"user": "syrianmofaex", "name": "خارجية سوريا"},
+    {"user": "AH_AlSharaa", "name": "الرئيس أحمد الشرع  "},
+    {"user": "syrianmofaex", "name": "الخارجية السورية"},
     {"user": "Sy_Defense", "name": "وزارة الدفاع"},
     {"user": "SyMOEADM", "name": "وزارة الإعلام"},
     {"user": "mocsyr", "name": "وزارة الثقافة"},
@@ -79,107 +79,107 @@ X_ACCOUNTS = [
     {"user": "SyMOIGov", "name": "الحكومة السورية"}
 ]
 
-def contains_syria_keyword(text):
-    """فلترة شاملة"""
-    return any(kw.lower() in text.lower() for kw in KEYWORDS_SYRIA)
+def load_last_tweets():
+    """تحميل آخر تغريدات"""
+    try:
+        if os.path.exists(TWEETS_FILE):
+            with open(TWEETS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except:
+        pass
+    return {}
 
-def get_source_name(url):
-    """أسماء الوكالات"""
-    sources = {
-        "sana.sy": "🇸🇾 سانا الرسمية",
-        "syria.tv": "📺 تلفزيون سوريا", 
-        "alikhbariah": "📺 الإخبارية السورية",
-        "aljazeera": "🟢 الجزيرة نت",
-        "bbc": "🔴 بي بي سي", 
-        "guardian": "🟠 الغارديان",
-        "aa.com.tr": "🇹🇷 الأناضول",
-        "skynewsarabia": "🔵 سكاي عربية",
-        "aawsat": "🔷 الشرق الأوسط"
-    }
-    return next((v for k, v in sources.items() if k in url.lower()), "📰 وكالة")
+def save_last_tweets(tweets):
+    """حفظ آخر تغريدات"""
+    try:
+        with open(TWEETS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(tweets, f, ensure_ascii=False, indent=2)
+    except:
+        pass
 
-def get_rss_news():
-    """20 وكالة مع فلترة سوريا"""
-    articles = []
-    cutoff = datetime.utcnow() - timedelta(hours=24)
-    
-    print("📰 فحص 20 وكالة...")
-    for i, url in enumerate(RSS_FEEDS, 1):
-        if i % 5 == 0: print(f"   [{i}/20]")
+def get_latest_tweet(username):
+    """استخراج آخر تغريدة فعلية"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) NewsBot/8.0'
+        }
+        url = f"https://x.com/{username}"
+        r = requests.get(url, headers=headers, timeout=15)
         
-        try:
-            headers = {'User-Agent': 'Mozilla/5.0 NewsBot/6.0'}
-            r = requests.get(url, headers=headers, timeout=12)
-            r.raise_for_status()
-            
-            feed = feedparser.parse(r.content)
-            source = get_source_name(url)
-            
-            for entry in feed.entries[:3]:
-                title = getattr(entry, 'title', '') or ''
-                summary = getattr(entry, 'summary', '') or getattr(entry, 'description', '') or ''
-                
-                if contains_syria_keyword(f"{title} {summary}"):
-                    pub_date = None
-                    for date_field in ['published_parsed', 'updated_parsed']:
-                        if hasattr(entry, date_field):
-                            try:
-                                pub_date = datetime(*getattr(entry, date_field)[:6])
-                                break
-                            except: pass
-                    
-                    if pub_date and pub_date > cutoff:
-                        articles.append({
-                            'title': title[:120],
-                            'link': getattr(entry, 'link', ''),
-                            'source': source,
-                            'date': pub_date
-                        })
-                        print(f"     ✅ {source}")
-                        break
-        except:
-            pass
-        
-        time.sleep(0.6)
-    
-    return sorted(articles, key=lambda x: x['date'], reverse=True)[:8]
+        if 'data-testid="tweetText"' in r.text:
+            tweet_match = re.search(r'data-testid="tweetText"[^>]*>(.*?)(?=<div|<a|$)', r.text, re.DOTALL)
+            if tweet_match:
+                text = re.sub(r'<[^>]+>', '', tweet_match.group(1)).strip()
+                if len(text) > 10:
+                    return text[:180]
+    except:
+        pass
+    return None
 
-def get_x_tweets():
-    """10 حسابات X"""
-    tweets = []
-    print("🐦 فحص 10 حسابات X...")
+def get_new_tweets():
+    """جديد فقط من 10 حسابات"""
+    last_tweets = load_last_tweets()
+    new_tweets = []
     
-    for i, account in enumerate(X_ACCOUNTS, 1):
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) NewsBot/6.0'
-            }
-            url = f"https://x.com/{account['user']}"
-            r = requests.get(url, headers=headers, timeout=15)
+    print("🐦 فحص التغريدات الجديدة...")
+    
+    for account in X_ACCOUNTS:
+        latest_tweet = get_latest_tweet(account['user'])
+        if latest_tweet:
+            last_tweet_id = last_tweets.get(account['user'], "")
             
-            if r.status_code == 200:
-                tweets.append({
+            # أول مرة أو تغريدة جديدة
+            if not last_tweet_id or last_tweet_id != latest_tweet:
+                new_tweets.append({
                     'name': account['name'],
                     'username': account['user'],
-                    'url': url,
-                    'status': '✅ نشط'
+                    'tweet': latest_tweet
                 })
-                print(f"  {i}. {account['name']}")
+                print(f"  🆕 {account['name']}")
+                
+                # حفظ كآخر تغريدة
+                last_tweets[account['user']] = latest_tweet
+            else:
+                print(f"  ⏭️ {account['name']} (نفسها)")
+        
+        time.sleep(2)
+    
+    # حفظ التحديثات
+    save_last_tweets(last_tweets)
+    return new_tweets[:6]
+
+def get_rss_news():
+    """أخبار سوريا من الوكالات"""
+    articles = []
+    
+    print("📰 فحص الوكالات...")
+    for i, url in enumerate(RSS_FEEDS, 1):
+        try:
+            r = requests.get(url, headers={'User-Agent': 'NewsBot/8.0'}, timeout=10)
+            feed = feedparser.parse(r.content)
+            
+            for entry in feed.entries[:2]:
+                title = getattr(entry, 'title', '') or ''
+                summary = getattr(entry, 'summary', '') or ''
+                
+                if any(kw.lower() in f"{title} {summary}".lower() for kw in KEYWORDS_SYRIA):
+                    articles.append({
+                        'title': title[:130],
+                        'link': getattr(entry, 'link', ''),
+                        'source': "📰 وكالة"
+                    })
+                    print(f"  ✅ خبر سوري")
+                    break
+                    
         except:
             pass
-        
-        time.sleep(1.8)
+        time.sleep(0.7)
     
-    return tweets
+    return articles[:4]
 
 def send_telegram(chat_id, message):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": True
-    }
+    data = {"chat_id": chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True}
     try:
         r = requests.post(url, data=data, timeout=15)
         return r.status_code == 200
@@ -187,42 +187,69 @@ def send_telegram(chat_id, message):
         return False
 
 def main():
-    print("🎯 البوت الشامل يعمل...")
+    print("🚀 البوت الذكي يعمل...")
     
+    # جمع الجديد فقط
+    new_tweets = get_new_tweets()
     rss_articles = get_rss_news()
-    x_accounts = get_x_tweets()
     
+    # بناء الرسالة
     now_str = datetime.utcnow().strftime("%H:%M UTC")
-    msg = f"<b>🇸🇾 تحديث سوريا الشامل</b>\n\n"
-    msg += f"<i>⏰ {now_str} | 20 وكالة + 10 X | 14 محافظة</i>\n\n"
+    msg = f"<b>🇸🇾 تحديث سوريا الجديد</b>
+
+"
+    msg += f"<i>⏰ {now_str}</i>
+
+"
     
-    # الحسابات الرسمية
-    if x_accounts:
-        msg += "<b>👥 الجهات الرسمية (10):</b>\n\n"
-        for i, acc in enumerate(x_accounts[:8], 1):
-            msg += f"{i}. <b>{acc['name']}</b>\n"
-            msg += f"<code>@{acc['username']}</code> {acc['status']}\n"
-            msg += f"<a href='{acc['url']}'>🔗 آخر نشاط</a>\n\n"
+    # تغريدات جديدة فقط
+    if new_tweets:
+        msg += "<b>🐦 تغريدات جديدة:</b>
+
+"
+        for i, tweet in enumerate(new_tweets, 1):
+            msg += f"{i}. <b>{tweet['name']}</b>
+"
+            msg += f"<code>@{tweet['username']}</code>
+"
+            msg += f"{tweet['tweet']}
+
+"
+    else:
+        msg += "<i>🐦 لا تغريدات جديدة</i>
+
+"
     
-    # الأخبار
+    # أخبار RSS
     if rss_articles:
-        msg += "<b>📰 أهم الأخبار:</b>\n\n"
+        msg += "<b>📰 أخبار سوريا:</b>
+
+"
         for i, article in enumerate(rss_articles, 1):
-            msg += f"{i}. <b>{article['title']}</b>\n"
-            msg += f"<i>{article['source']}</i>\n"
-            msg += f"<a href='{article['link']}'>🔗 الكامل</a>\n\n"
+            msg += f"{i}. <b>{article['title']}</b>
+"
+            msg += f"{article['source']}
+"
+            msg += f"<a href='{article['link']}'>🔗 الكامل</a>
+
+"
     
-    if not rss_articles:
-        msg += "<i>📭 لا أخبار سورية الـ 24 ساعة الأخيرة</i>\n\n"
+    if not new_tweets and not rss_articles:
+        msg += "<i>📭 لا تحديثات جديدة الآن</i>"
     
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    msg += "<b>تم تطويره بواسطة:</b>\n"
-    msg += "<b>محمد محمد جلال الخطيب</b>\n"
+    msg += "
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"
+    msg += "<b>تم تطويره بواسطة:</b>
+"
+    msg += "<b>محمد محمد جلال الخطيب</b>
+"
     msg += "<b>طلاب كليات الإعلام || FMD</b>"
     
     # الإرسال
     success = sum(send_telegram(chat_id, msg) for chat_id in TARGET_CHATS)
-    print(f"\n🎉 نجح: {success}/2 وجهة | {len(rss_articles)} خبر + {len(x_accounts)} X")
+    print(f"
+🎉 نجح: {success}/2 | {len(new_tweets)} جديد X + {len(rss_articles)} أخبار")
 
-if __name__ == "__main__":
+if name == "main":
     main()
