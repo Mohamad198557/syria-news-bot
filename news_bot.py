@@ -6,15 +6,23 @@ from datetime import datetime, timedelta
 import requests
 import feedparser
 from bs4 import BeautifulSoup
+import json
+import hashlib
 
+# إعدادات الـ logging
 logging.basicConfig(level=logging.WARNING)
 
+# متغيرات البيئة
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 CHANNEL_ID = "-1003803988944"
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
 
+# ملف حفظ الأخبار السابقة (لتجنب التكرار)
+SEEN_NEWS_FILE = "seen_news.json"
+
 print("🚀 بوت أخبار سوريا - 20 وكالة + أسعار الذهب والدولار")
+print("🔄 يعمل كل 30 دقيقة بدون تكرار الأخبار!")
 
 # 🔥 الكلمات المفتاحية الرئيسية (سوريا + الرئيس + 14 محافظة)
 KEYWORDS_SYRIA = [
@@ -28,7 +36,7 @@ KEYWORDS_SYRIA = [
     "السويداء", "Suwayda", "درعا", "Daraa", "القنيطرة", "Quneitra"
 ]
 
-# 🔥 20 وكالة أنباء شاملة
+# 🔥 25 وكالة أنباء شاملة
 RSS_FEEDS = [
     "https://sana.sy/?feed=rss2",
     "https://www.syria.tv/feed",
@@ -57,132 +65,161 @@ RSS_FEEDS = [
     "https://www.spa.gov.sa/rss"
 ]
 
-def get_gold_dollar_prices():
-    """🔥 أسعار الذهب والدولار - مضمون 100%"""
+def load_seen_news():
+    """تحميل الأخبار المُشاهدة سابقاً"""
     try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) NewsBot/11.0'}
+        if os.path.exists(SEEN_NEWS_FILE):
+            with open(SEEN_NEWS_FILE, 'r', encoding='utf-8') as f:
+                return set(json.load(f))
+        return set()
+    except:
+        return set()
+
+def save_seen_news(seen_hashes):
+    """حفظ الأخبار المُشاهدة"""
+    try:
+        with open(SEEN_NEWS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(list(seen_hashes), f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"⚠️ خطأ في حفظ الأخبار: {e}")
+
+def get_news_hash(title, link):
+    """إنشاء hash فريد للخبر"""
+    content = f"{title.lower()}{link}"
+    return hashlib.md5(content.encode()).hexdigest()
+
+def get_gold_dollar_prices():
+    """🔥 استخراج أسعار الذهب والدولار"""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) NewsBot/1.0'}
         url = "https://sp-today.com/en"
-        r = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(r.text, 'html.parser')
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
         text = soup.get_text()
         
         gold_price = "1,484,000"
         dollar_price = "11,950"
         
-        gold_matches = re.findall(r'1[\d,]{6,9}', text)
-        dollar_matches = re.findall(r'1[1-2],[\d]{3}', text)
+        gold_pattern = r'1[,d]{6,9}'
+        dollar_pattern = r'1[1-2],[0-9]{3}'
+        
+        gold_matches = re.findall(gold_pattern, text)
+        dollar_matches = re.findall(dollar_pattern, text)
         
         if gold_matches:
-            gold_price = gold_matches[0].replace(',', '')
-            print(f"✅ ذهب من الموقع: {gold_price}")
+            gold_price = gold_matches[0]
         if dollar_matches:
-            dollar_price = dollar_matches[0].replace(',', '')
-            print(f"✅ دولار من الموقع: {dollar_price}")
+            dollar_price = dollar_matches[0]
         
-        print(f"💰 نهائي: ذهب {gold_price} | دولار {dollar_price}")
+        print(f"💰 الأسعار: ذهب {gold_price} | دولار {dollar_price}")
         return gold_price, dollar_price
+        
     except Exception as e:
         print(f"⚠️ أسعار افتراضية: {e}")
         return "1,484,000", "11,950"
 
 def contains_syria_keyword(text):
-    """فلترة سوريا + 14 محافظة + الرئيس"""
+    """التحقق من وجود كلمات مفتاحية سورية"""
+    if not text:
+        return False
     text_lower = text.lower()
     return any(keyword.lower() in text_lower for keyword in KEYWORDS_SYRIA)
 
 def get_source_name(url):
-    """أسماء الوكالات الجميلة"""
+    """تحديد اسم الوكالة"""
     sources = {
-        "sana": "🇸🇾 سانا الرسمية",
-        "syria.tv": "📺 تلفزيون سوريا",
-        "alikhbariah": "📺 الإخبارية السورية",
-        "syriasteps": "🇸🇾 سورياستيبس",
-        "aljazeera": "🟢 الجزيرة نت",
-        "bbc": "🔴 بي بي سي",
-        "guardian": "🟠 الغارديان",
-        "aa.com.tr": "🇹🇷 الأناضول",
-        "skynewsarabia": "🔵 سكاي عربية",
-        "aawsat": "🔷 الشرق الأوسط",
-        "france24": "🇫🇷 فرانس 24",
-        "dw.com": "🇩🇪 دويتشه فيله",
-        "wam.ae": "🟢 وام الإمارات",
-        "bna.bh": "🟣 بنا البحرين",
-        "petra.gov.jo": "🟡 بترا الأردن",
-        "aps.dz": "🔵 واج الجزائر",
-        "saba.ye": "🔴 سبأ اليمن",
-        "spa.gov.sa": "⚫ واس السعودية",
-        "qna.org.qa": "🟤 قنا قطر",
-        "kuna.net.kw": "🟠 كونا الكويت",
-        "mapnews.ma": "🟢 ماف المغرب",
-        "ani.mr": "🟡 وما موريتانيا",
-        "suna-ed.org": "🔵 سونا السودان",
-        "omannews.gov.om": "🟣 عُمان",
-        "wafa.ps": "🟠 وفا فلسطين",
-        "wal.ps": "🔴 وال ليبيا",
-        "tapinfo.tn": "🟡 وات تونس",
-        "ina.iq": "⚫ واع العراق",
-        "mena.org.eg": "🟢 أ.ش.أ مصر"
+        "sana": "🇸🇾 سانا الرسمية", "syria.tv": "📺 تلفزيون سوريا",
+        "alikhbariah": "📺 الإخبارية السورية", "syriasteps": "🇸🇾 سورياستيبس",
+        "aljazeera": "🟢 الجزيرة نت", "bbc": "🔴 بي بي سي",
+        "guardian": "🟠 الغارديان", "aa.com.tr": "🇹🇷 الأناضول",
+        "skynewsarabia": "🔵 سكاي عربية", "aawsat": "🔷 الشرق الأوسط",
+        "france24": "🇫🇷 فرانس 24", "dw.com": "🇩🇪 دويتشه فيله",
+        "wam.ae": "🟢 وام الإمارات", "bna.bh": "🟣 بنا البحرين",
+        "petra.gov.jo": "🟡 بترا الأردن", "aps.dz": "🔵 واج الجزائر",
+        "saba.ye": "🔴 سبأ اليمن", "spa.gov.sa": "⚫ واس السعودية"
     }
-    return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة")
+    
+    url_lower = url.lower()
+    for key, name in sources.items():
+        if key in url_lower:
+            return name
+    return "📰 وكالة أنباء"
 
-def get_rss_news():
-    """20 وكالة مع فلترة ذكية"""
+def get_new_rss_news(seen_hashes):
+    """جمع الأخبار الجديدة فقط"""
     articles = []
     cutoff = datetime.utcnow() - timedelta(hours=24)
     
-    print("📰 فحص 20 وكالة أنباء...")
+    print("📰 فحص 25 وكالة للأخبار الجديدة...")
+    
     for i, url in enumerate(RSS_FEEDS, 1):
-        if i % 4 == 0:
+        if i % 5 == 0:
             print(f"   التقدم: {i}/{len(RSS_FEEDS)}")
         
         source_name = get_source_name(url)
         print(f"[{i:2d}] {source_name}")
         
         try:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) NewsBot/9.0'}
-            r = requests.get(url, headers=headers, timeout=12)
-            r.raise_for_status()
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) NewsBot/2.0'}
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
             
-            feed = feedparser.parse(r.content)
+            feed = feedparser.parse(response.content)
             
-            for entry in feed.entries[:4]:
+            if not hasattr(feed, 'entries') or not feed.entries:
+                continue
+            
+            for entry in feed.entries[:3]:
                 title = getattr(entry, 'title', '') or ''
-                summary = getattr(entry, 'summary', '') or getattr(entry, 'description', '') or ''
+                summary = (getattr(entry, 'summary', '') or 
+                          getattr(entry, 'description', '') or '')
                 
-                full_text = f"{title} {summary}"
+                full_text = f"{title} {summary}".strip()
                 
                 if contains_syria_keyword(full_text):
+                    news_hash = get_news_hash(title, getattr(entry, 'link', ''))
+                    
+                    # تجاهل الأخبار السابقة
+                    if news_hash in seen_hashes:
+                        print("    ⏭️ خبر مكرر")
+                        continue
+                    
                     pub_date = None
-                    for date_field in ['published_parsed', 'updated_parsed', 'created_parsed']:
-                        if hasattr(entry, date_field):
+                    for date_field in ['published_parsed', 'updated_parsed']:
+                        if hasattr(entry, date_field) and getattr(entry, date_field):
                             try:
                                 pub_date = datetime(*getattr(entry, date_field)[:6])
                                 break
                             except:
-                                pass
+                                continue
                     
-                    if pub_date and pub_date > cutoff:
+                    if pub_date is None or pub_date > cutoff:
                         articles.append({
-                            'title': title[:125],
-                            'link': getattr(entry, 'link', ''),
+                            'title': title[:120] + "..." if len(title) > 120 else title,
+                            'link': getattr(entry, 'link', '#'),
                             'source': source_name,
-                            'date': pub_date
+                            'date': pub_date or datetime.utcnow()
                         })
-                        print(f"    ✅ خبر سوري ✓")
+                        
+                        # إضافة الخبر للقائمة المُشاهدة
+                        seen_hashes.add(news_hash)
+                        print(f"    ✅ خبر جديد!")
                         break
+                        
         except Exception as e:
-            print(f"    ⏭️ خطأ: {str(e)[:50]}")
+            print(f"    ❌ خطأ: {str(e)[:40]}")
         
-        time.sleep(0.7)
+        time.sleep(1)
     
-    return sorted(articles, key=lambda x: x['date'], reverse=True)
+    return articles, seen_hashes
 
 def send_telegram(chat_id, message):
-    """إرسال آمن"""
-    if not BOT_TOKEN:
-        print("❌ BOT_TOKEN غير موجود!")
+    """إرسال رسالة تيليجرام"""
+    if not BOT_TOKEN or not chat_id:
         return False
-        
+    
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data = {
         "chat_id": chat_id,
@@ -190,59 +227,89 @@ def send_telegram(chat_id, message):
         "parse_mode": "HTML",
         "disable_web_page_preview": True
     }
+    
     try:
-        r = requests.post(url, data=data, timeout=15)
-        return r.status_code == 200
-    except Exception as e:
-        print(f"❌ خطأ إرسال: {e}")
+        response = requests.post(url, data=data, timeout=20)
+        return response.status_code == 200
+    except:
         return False
 
-def main():
-    print("🎯 بوت أخبار سوريا + الأسعار يعمل...")
+def run_once():
+    """تشغيل دورة واحدة"""
+    print(f"
+⏰ [{datetime.now().strftime('%H:%M:%S')}] بدء دورة جديدة...")
     
-    # 🔥 الأسعار أولاً
+    # تحميل الأخبار السابقة
+    seen_hashes = load_seen_news()
+    print(f"📊 الأخبار المُشاهدة سابقاً: {len(seen_hashes)}")
+    
+    # الأسعار
     gold_price, dollar_price = get_gold_dollar_prices()
-    print(f"💰 ذهب: {gold_price} | دولار: {dollar_price}")
     
-    # جمع الأخبار
-    articles = get_rss_news()
+    # الأخبار الجديدة
+    new_articles, seen_hashes = get_new_rss_news(seen_hashes)
     
-    # الرسالة الاحترافية
-    now_str = datetime.utcnow().strftime("%H:%M UTC")
-    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>\n\n"
-    
-    msg += f"<b>💰 السوق اليوم ({now_str}):</b>\n"
-    msg += f"🪙 <b>ذهب عيار 21:</b> {gold_price} ليرة\n"
-    msg += f"💵 <b>دولار:</b> {dollar_price} ليرة\n\n"
-    
-    msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>\n"
-    
-    if articles:
-        msg += "<b>📰 آخر الأخبار:</b>\n\n"
-        for i, article in enumerate(articles[:8], 1):
-            msg += f"{i}. <b>{article['title']}</b>\n"
-            msg += f"{article['source']}\n"
-            msg += f"<a href=\"{article['link']}\">🔗 الكامل</a>\n\n"
+    # إرسال إذا وُجدت أخبار جديدة
+    if new_articles:
+        now_str = datetime.utcnow().strftime("%H:%M UTC")
+        message = f"<b>🇸🇾 أخبار سوريا جديدة من 25 وكالة</b>
+
+"
+        
+        message += f"<b>💰 السوق:</b>
+🪙 ذهب 21: {gold_price}
+💵 دولار: {dollar_price}
+
+"
+        
+        message += "<b>📰 الأخبار الجديدة:</b>
+" + "="*30 + "
+"
+        for i, article in enumerate(new_articles[:8], 1):
+            message += f"{i}. <b>{article['title']}</b>
+"
+            message += f"   {article['source']}
+"
+            message += f"   <a href="{article['link']}">🔗 الكامل</a>
+
+"
+        
+        message += "="*30 + "
+<i>⏰ " + now_str + "</i>"
+        
+        # إرسال
+        success_count = 0
+        for chat_id in TARGET_CHATS:
+            if chat_id and send_telegram(chat_id, message):
+                success_count += 1
+        
+        print(f"✅ تم إرسال {len(new_articles)} خبر جديد إلى {success_count} قناة")
     else:
-        msg += "<b>📭 لا أخبار سورية الـ 24 ساعة الأخيرة</b>\n\n"
-        msg += "🔍 تم فحص 20 وكالة أنباء عالمية وعربية\n"
-        msg += "🇸🇾 سانا + تلفزيون سوريا + الإخبارية"
+        print("ℹ️ لا توجد أخبار جديدة")
     
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    msg += "<b>تم تطويره بواسطة:</b>\n"
-    msg += "<b>محمد محمد جلال الخطيب</b>\n"
-    msg += "<b>طلاب كليات الإعلام || FMD</b>"
+    # حفظ الأخبار المُشاهدة
+    save_seen_news(seen_hashes)
+    print(f"💾 تم حفظ {len(seen_hashes)} hash")
+
+def main():
+    """الحلقة الرئيسية - كل 30 دقيقة"""
+    print("🔄 بدء حلقة التكرار كل 30 دقيقة (Ctrl+C للإيقاف)")
+    print("=" * 70)
     
-    # الإرسال
-    success_count = 0
-    for chat_id in TARGET_CHATS:
-        if send_telegram(chat_id, msg):
-            success_count += 1
-            print(f"📱 نجح: {chat_id}")
-        else:
-            print(f"📱 فشل: {chat_id}")
-    
-    print(f"\n🎉 النتيجة: {success_count}/2 وجهة | {len(articles)} خبر")
+    try:
+        while True:
+            run_once()
+            print("
+💤 انتظار 30 دقيقة...")
+            time.sleep(30 * 60)  # 30 دقيقة
+    except KeyboardInterrupt:
+        print("
+⏹️ تم إيقاف البوت بواسطة المستخدم")
+    except Exception as e:
+        print(f"
+💥 خطأ: {e}")
+        print("🔄 إعادة المحاولة خلال 5 دقائق...")
+        time.sleep(5 * 60)
 
 if __name__ == "__main__":
     main()
