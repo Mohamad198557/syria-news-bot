@@ -30,20 +30,28 @@ KEYWORDS_SYRIA = [
 
 # 🔥 20 وكالة أنباء شاملة
 RSS_FEEDS = [
-    "https://sana.sy/?feed=rss2", "https://www.syria.tv/feed",
-    "https://alikhbariah.com/feed/", "https://syriasteps.com/feed/",
+    "https://sana.sy/?feed=rss2", 
+    "https://www.syria.tv/feed",
+    "https://alikhbariah.com/feed/", 
+    "https://syriasteps.com/feed/",
     "https://www.aljazeera.com/xml/rss/all.xml",
     "http://feeds.bbci.co.uk/news/world/rss.xml",
     "https://www.theguardian.com/world/rss",
     "https://www.nytimes.com/svc/collections/v1/publish/www.nytimes.com/section/world/rss.xml",
-    "https://www.aa.com.tr/ar/rss/default.aspx", "https://trt.global/arabi/rss/",
-    "https://aawsat.com/rss-feed", "https://www.alaraby.co.uk/feed.xml",
-    "https://www.skynewsarabia.com/rss/world.xml", "https://www.alalam.ir/rss",
-    "https://asharq.com/rss/feed/1/", "https://www.france24.com/en/rss",
-    "https://www.dw.com/en/rss-top-stories", "https://www.euronews.com/rss.xml",
+    "https://www.aa.com.tr/ar/rss/default.aspx", 
+    "https://trt.global/arabi/rss/",
+    "https://aawsat.com/rss-feed", 
+    "https://www.alaraby.co.uk/feed.xml",
+    "https://www.skynewsarabia.com/rss/world.xml", 
+    "https://www.alalam.ir/rss",
+    "https://asharq.com/rss/feed/1/", 
+    "https://www.france24.com/en/rss",
+    "https://www.dw.com/en/rss-top-stories", 
+    "https://www.euronews.com/rss.xml",
     "http://feeds.feedburner.com/time/world",
-    "https://abcnews.go.com/abcnews/usheadlines"
-      # 🔥 🔥 وكالات عربية رسمية كاملة 🔥 🔥
+    "https://abcnews.go.com/abcnews/usheadlines",
+    
+    # 🔥 🔥 وكالات عربية رسمية كاملة 🔥 🔥
     "https://www.wam.ae/ar/rss",                     # 🟢 وام (إمارات)
     "https://www.bna.bh/rss/?lang=ar",               # 🟣 بنا (البحرين)
     "https://www.petra.gov.jo/rss/JoSiteAr.aspx",    # 🟡 بترا (الأردن)
@@ -83,8 +91,8 @@ def get_gold_dollar_prices():
         dollar_price = "11,950"
         
         # 🔥 regex محسّن للأرقام السورية الكبيرة
-        gold_matches = re.findall(r'1[,\d]{6,9}', text)
-        dollar_matches = re.findall(r'1[1-2],\d{3}', text)
+        gold_matches = re.findall(r'1[,\\d]{6,9}', text)
+        dollar_matches = re.findall(r'1[1-2],\\d{3}', text)
         
         if gold_matches:
             gold_price = gold_matches[0].replace(',', '')
@@ -109,15 +117,19 @@ def contains_syria_keyword(text):
 def get_source_name(url):
     """أسماء الوكالات الجميلة"""
     sources = {
-        "sana.sy": "🇸🇾 سانا الرسمية", "syria.tv": "📺 تلفزيون سوريا",
-        "alikhbariah": "📺 الإخبارية السورية", "syriasteps": "🇸🇾 سورياستيبس",
-        "aljazeera": "🟢 الجزيرة نت", "bbc": "🔴 بي بي سي",
-        "guardian": "🟠 الغارديان", "aa.com.tr": "🇹🇷 الأناضول",
-        "skynewsarabia": "🔵 سكاي عربية", "aawsat": "🔷 الشرق الأوسط",
-        "france24": "🇫🇷 فرانس 24", "dw.com": "🇩🇪 دويتشه فيله"
-        # 🔥 وكالات عربية رسمية ⭐
-        "sana.sy": "🇸🇾 سانا الرسمية",
+        "sana.sy": "🇸🇾 سانا الرسمية", 
         "syria.tv": "📺 تلفزيون سوريا",
+        "alikhbariah": "📺 الإخبارية السورية", 
+        "syriasteps": "🇸🇾 سورياستيبس",
+        "aljazeera": "🟢 الجزيرة نت", 
+        "bbc": "🔴 بي بي سي",
+        "guardian": "🟠 الغارديان", 
+        "aa.com.tr": "🇹🇷 الأناضول",
+        "skynewsarabia": "🔵 سكاي عربية", 
+        "aawsat": "🔷 الشرق الأوسط",
+        "france24": "🇫🇷 فرانس 24", 
+        "dw.com": "🇩🇪 دويتشه فيله",
+        # 🔥 وكالات عربية رسمية ⭐
         "wam.ae": "🟢 وام الإمارات",
         "bna.bh": "🟣 بنا البحرين", 
         "petra.gov.jo": "🟡 بترا الأردن",
@@ -134,11 +146,7 @@ def get_source_name(url):
         "wal.ps": "🔴 وال ليبيا",
         "tapinfo.tn": "🟡 وات تونس",
         "ina.iq": "⚫ واع العراق",
-        "mena.org.eg": "🟢 أ.ش.أ مصر",
-        
-        # 🌍 عالمية
-        "aljazeera": "🟢 الجزيرة نت",
-        "aa.com.tr": "🇹🇷 الأناضول"
+        "mena.org.eg": "🟢 أ.ش.أ مصر"
     }
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة")
 
@@ -221,28 +229,28 @@ def main():
     
     # الرسالة الاحترافية **مُصححة**
     now_str = datetime.utcnow().strftime("%H:%M UTC")
-    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>\n\n"
+    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>\\n\\n"
     
-    msg += f"<b>💰 السوق اليوم ({now_str}):</b>\n"
-    msg += f"🪙 <b>ذهب عيار 21:</b> {gold_price} ليرة\n"
-    msg += f"💵 <b>دولار:</b> {dollar_price} ليرة\n\n"
+    msg += f"<b>💰 السوق اليوم ({now_str}):</b>\\n"
+    msg += f"🪙 <b>ذهب عيار 21:</b> {gold_price} ليرة\\n"
+    msg += f"💵 <b>دولار:</b> {dollar_price} ليرة\\n\\n"
     
-    msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>\n"
+    msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>\\n"
     
     if articles:
-        msg += "<b>📰 آخر الأخبار:</b>\n\n"
+        msg += "<b>📰 آخر الأخبار:</b>\\n\\n"
         for i, article in enumerate(articles[:8], 1):
-            msg += f"{i}. <b>{article['title']}</b>\n"
-            msg += f"{article['source']}\n"
-            msg += f"<a href=\"{article['link']}\">🔗 الكامل</a>\n\n"
+            msg += f"{i}. <b>{article['title']}</b>\\n"
+            msg += f"{article['source']}\\n"
+            msg += f"<a href=\"{article['link']}\">🔗 الكامل</a>\\n\\n"
     else:
-        msg += "<b>📭 لا أخبار سورية الـ 24 ساعة الأخيرة</b>\n\n"
-        msg += "🔍 تم فحص 20 وكالة أنباء عالمية وعربية\n"
+        msg += "<b>📭 لا أخبار سورية الـ 24 ساعة الأخيرة</b>\\n\\n"
+        msg += "🔍 تم فحص 20 وكالة أنباء عالمية وعربية\\n"
         msg += "🇸🇾 سانا + تلفزيون سوريا + الإخبارية"
     
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    msg += "<b>تم تطويره بواسطة:</b>\n"
-    msg += "<b>محمد محمد جلال الخطيب</b>\n"
+    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
+    msg += "<b>تم تطويره بواسطة:</b>\\n"
+    msg += "<b>محمد محمد جلال الخطيب</b>\\n"
     msg += "<b>طلاب كليات الإعلام || FMD</b>"
     
     # الإرسال
