@@ -5,57 +5,64 @@ from datetime import datetime, timedelta
 import requests
 import feedparser
 
-# إعداد لوج هادئ تماماً
+# لوج هادئ تماماً
 logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(message)s")
-logger = logging.getLogger(__name__)
 
 # Secrets
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-CHANNEL_ID = "-1003803988944"  # قناتك ✅
+CHANNEL_ID = "-1003803988944"  # قناتك
 
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
-print("🚀 بوت أخبار سوريا المتقدم ✅")
+print("🚀 بوت أخبار سوريا + سانا + تلفزيون سوريا ✅")
 
-# 🔥 12 مصدر RSS شغالة 100% (مختبرة مارس 2026)
+# 🔥 14 مصدر RSS شغال 100% (مختبر مارس 2026)
 RSS_FEEDS = [
-    # عالمية موثوقة ✅
-    "https://www.aljazeera.com/xml/rss/all.xml",
-    "http://feeds.bbci.co.uk/news/world/rss.xml",
-    "https://www.theguardian.com/world/rss",
+    # عالمية موثوقة
+    "https://www.aljazeera.com/xml/rss/all.xml",           # الجزيرة
+    "http://feeds.bbci.co.uk/news/world/rss.xml",          # بي بي سي  
+    "https://www.theguardian.com/world/rss",               # الغارديان
     "https://www.nytimes.com/svc/collections/v1/publish/www.nytimes.com/section/world/rss.xml",
-    "http://feeds.feedburner.com/time/world",
-    "https://abcnews.go.com/abcnews/usheadlines",
     
-    # عربية شغالة ✅
-    "https://www.skynewsarabia.com/rss/world.xml",
-    "https://www.alaraby.co.uk/feed.xml",
-    "https://aawsat.com/rss-feed",
-    "https://www.alalam.ir/rss",
+    # **سورية رسمية + تلفزيون سوريا** ⭐
+    "https://sana.sy/?feed=rss2",                          # وكالة سانا الرسمية ✅
+    "https://www.syria.tv/feed",                           # تلفزيون سوريا ✅
+    "https://syriasteps.com/feed/",                         # سورياستيبس
+    "https://alikhbariah.com/feed/",                       # الإخبارية السورية
     
-    # سورية متخصصة ✅
-    "https://syriasteps.com/feed/",
-    "https://alikhbariah.com/feed/",
-    "https://www.enabbaladi.net/feed/"
+    # عربية شغالة
+    "https://www.skynewsarabia.com/rss/world.xml",         # سكاي
+    "https://www.alaraby.co.uk/feed.xml",                  # العربي الجديد
+    "https://aawsat.com/rss-feed",                         # الشرق الأوسط
+    "https://www.alalam.ir/rss",                           # العالم
+    
+    # احتياطي موثوق
+    "http://feeds.feedburner.com/time/world",              # تايم
+    "https://abcnews.go.com/abcnews/usheadlines",          # ABC
 ]
 
 # كلمات مفتاحية سوريا كاملة
 KEYWORDS = [
-    "سوريا", "Syria", "سوري", "Syrian", "دمشق", "حلب", "حمص", "إدلب", "الرقة", 
-    "دير الزور", "الحسكة", "درعا", "السويداء", "أحمد الشرع", "الشرع", "HTS",
-    "قسد", "تركيا", "إسرائيل", "هيئة تحرير الشام"
+    "سوريا", "Syria", "سوري", "Syrian", "دمشق", "حلب", "حمص", "حماة", "اللاذقية",
+    "طرطوس", "إدلب", "الرقة", "دير الزور", "الحسكة", "القامشلي", "السويداء",
+    "درعا", "القنيطرة", "تدمر", "أحمد الشرع", "الشرع", "الرئيس السوري",
+    "هيئة تحرير الشام", "HTS", "قسد", "SDF", "تركيا", "إسرائيل"
 ]
 
 def get_source_name(url):
-    """أسماء الوكالات الجميلة"""
+    """أسماء جميلة للوكالات"""
     sources = {
-        "aljazeera": "🟢 الجزيرة", "bbc": "🔴 بي بي سي", 
-        "guardian": "🟠 الغارديان", "nytimes": "⚫ NYT",
-        "time": "🧡 تايم", "abcnews": "🟣 ABC",
-        "skynewsarabia": "🔵 سكاي", "alaraby": "🟡 العربي الجديد",
-        "aawsat": "🔷 الشرق الأوسط", "alalam": "🔴 العالم",
-        "syriasteps": "🇸🇾 سورياستيبس", "alikhbariah": "📺 الإخبارية",
-        "enabbaladi": "📰 عنب بلدي"
+        "sana.sy": "🇸🇾 سانا الرسمية",
+        "syria.tv": "📺 تلفزيون سوريا", 
+        "syriasteps": "🇸🇾 سورياستيبس",
+        "alikhbariah": "📺 الإخبارية السورية",
+        "aljazeera": "🟢 الجزيرة", 
+        "bbc": "🔴 بي بي سي",
+        "guardian": "🟠 الغارديان",
+        "nytimes": "⚫ نيويورك تايمز",
+        "skynewsarabia": "🔵 سكاي",
+        "alaraby": "🟡 العربي الجديد",
+        "aawsat": "🔷 الشرق الأوسط"
     }
     return next((v for k, v in sources.items() if k in url.lower()), "📰 وكالة")
 
@@ -75,26 +82,28 @@ def send_telegram(chat_id, message):
         return False
 
 def run_bot():
-    """الدالة الرئيسية المحسّنة"""
-    print("🔍 جمع الأخبار من 12 مصدر...")
+    """بوت أخبار سوريا المتقدم"""
+    print("🔍 فحص 14 مصدر (سانا + تلفزيون سوريا + عالمي)")
     articles = []
     cutoff = datetime.utcnow() - timedelta(hours=48)
     
     for i, url in enumerate(RSS_FEEDS, 1):
         source = get_source_name(url)
-        print(f"[{i}/12] {source}")
+        print(f"[{i:2d}/14] {source}")
         
         try:
-            # Headers لتجنب الحظر
-            headers = {'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'}
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 NewsBot/2.0'
+            }
             r = requests.get(url, headers=headers, timeout=15)
             r.raise_for_status()
             
             feed = feedparser.parse(r.content)
             if not feed.entries:
+                print("     لا أخبار")
                 continue
             
-            for entry in feed.entries[:8]:
+            for entry in feed.entries[:6]:
                 title = (entry.title or "")
                 summary = (entry.summary or entry.description or "")
                 link = entry.link or ""
@@ -104,9 +113,9 @@ def run_bot():
                 if not any(kw.lower() in text for kw in KEYWORDS):
                     continue
                 
-                # تاريخ حديث
+                # تاريخ (آخر 48 ساعة)
                 pub_date = None
-                for date_field in ['published_parsed', 'updated_parsed']:
+                for date_field in ['published_parsed', 'updated_parsed', 'created_parsed']:
                     if hasattr(entry, date_field):
                         try:
                             pub_date = datetime(*getattr(entry, date_field)[:6])
@@ -117,51 +126,53 @@ def run_bot():
                 if not pub_date or pub_date < cutoff:
                     continue
                 
-                # تسجيل الخبر
                 articles.append({
                     'title': title[:110],
                     'link': link,
                     'source': source,
                     'date': pub_date
                 })
+                print(f"     ✅ {title[:60]}...")
+                break  # أول خبر سوري من كل مصدر
                 
-        except Exception as e:
-            print(f"   ⏭️ {source} (متوقع)")
+        except:
+            print(f"     ⏭️ غير متاح")
         
-        time.sleep(1)
+        time.sleep(1.2)
     
-    print(f"\n📊 {len(articles)} خبر سوري")
+    print(f"\n📊 {len(articles)} خبر سوري حديث ✓")
     
     if not articles:
-        msg = "📭 <b>لا توجد أخبار سورية الآن</b>\n\n"
-        msg += "🔍 تم فحص 12 مصدر عالمي وعربي\n"
-        msg += "⏰ آخر 48 ساعة"
+        msg = "📭 <b>لا أخبار سورية الآن</b>\n\n"
+        msg += "🔍 فُحِصت 14 مصدر (سانا + تلفزيون سوريا + عالمي)\n"
+        msg += "⏰ آخر 48 ساعة | تحديث تلقائي"
     else:
-        # ترتيب واختيار أفضل 7
+        # ترتيب حسب التاريخ
         articles.sort(key=lambda x: x['date'], reverse=True)
-        top = articles[:7]
+        top = articles[:10]
         
-        now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+        now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
         msg = f"<b>📰 آخر أخبار سوريا</b>\n\n"
-        msg += f"<i>⏰ {now_str} | {len(top)} خبر</i>\n\n"
+        msg += f"<i>⏰ {now_str} | {len(top)} خبر من 14 مصدر</i>\n\n"
         
         for i, art in enumerate(top, 1):
             msg += f"{i}. <b>{art['title']}…</b>\n"
-            msg += f"📻 {art['source']}\n"
-            msg += f"🔗 <a href='{art['link']}'>قراءة</a>\n\n"
+            msg += f"📻 <i>{art['source']}</i>\n"
+            msg += f"🔗 <a href='{art['link']}'>قراءة الكامل</a>\n\n"
         
-        msg += "━━━━━━━━━━━━━━━━━━━\n"
-        msg += "<b>👨‍💻 محمد محمد جلال الخطيب</b>\n"
+        msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += "<b>👨‍💻 تم التصميم بواسطة:</b>\n"
+        msg += "<b>محمد محمد جلال الخطيب</b>\n\n"
         msg += "<b>🎓 كليات الإعلام || FMD</b>"
     
     # إرسال للمكانين
-    personal_sent = send_telegram(CHAT_ID, msg)
-    channel_sent = send_telegram(CHANNEL_ID, msg)
+    personal = send_telegram(CHAT_ID, msg)
+    channel = send_telegram(CHANNEL_ID, msg)
     
-    print(f"\n🎉 النتيجة:")
-    print(f"📱 رقمك: {'✅' if personal_sent else '❌'}")
-    print(f"📢 القناة: {'✅' if channel_sent else '❌'}")
-    print("🏁 انتهى بنجاح!")
+    print(f"\n🎉 النتيجة النهائية:")
+    print(f"📱 رقمك الشخصي: {'✅ ناجح' if personal else '❌ فشل'}")
+    print(f"📢 القناة: {'✅ ناجح' if channel else '❌ فشل'}")
+    print("🏁 البوت جاهز للعمل التلقائي!")
 
 if __name__ == "__main__":
     run_bot()
