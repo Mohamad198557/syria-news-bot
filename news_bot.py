@@ -43,6 +43,28 @@ RSS_FEEDS = [
     "https://www.dw.com/en/rss-top-stories", "https://www.euronews.com/rss.xml",
     "http://feeds.feedburner.com/time/world",
     "https://abcnews.go.com/abcnews/usheadlines"
+      # 🔥 🔥 وكالات عربية رسمية كاملة 🔥 🔥
+    "https://www.wam.ae/ar/rss",                     # 🟢 وام (إمارات)
+    "https://www.bna.bh/rss/?lang=ar",               # 🟣 بنا (البحرين)
+    "https://www.petra.gov.jo/rss/JoSiteAr.aspx",    # 🟡 بترا (الأردن)
+    "https://www.aps.dz/rss",                        # 🔵 واج (الجزائر)
+    "https://www.saba.ye/rss/feed.xml",              # 🔴 سبأ (اليمن)
+    "https://www.spa.gov.sa/rss",                    # ⚫ واس (السعودية)
+    "https://www.qna.org.qa/rss",                    # 🟤 قنا (قطر)
+    "https://www.kuna.net.kw/rss/",                  # 🟠 كونا (الكويت)
+    "https://www.mapnews.ma/rss/actualite-generale", # 🟢 ماف (المغرب)
+    "https://www.ani.mr/rss/",                       # 🟡 وما (موريتانيا)
+    "https://www.suna-ed.org/rss/",                  # 🔵 سونا (السودان)
+    "https://www.omannews.gov.om/rss",               # 🟣 عمان (عُمان)
+    "https://www.wafa.ps/pages/rss.aspx",            # 🟠 وفا (فلسطين)
+    "https://www.wal.ps/rss/",                       # 🔴 وال (ليبيا)
+    "https://www.tapinfo.tn/rss",                    # 🟡 وات (تونس)
+    "https://www.ina.iq/rss/",                       # ⚫ واع (العراق)
+    "https://www.mena.org.eg/rss/",                  # 🟢 أ.ش.أ (مصر)
+    
+    # 🌍 عالمية (موجودة)
+    "https://www.aljazeera.com/xml/rss/all.xml",
+    "https://www.aa.com.tr/ar/rss/default.aspx"
 ]
 
 def get_gold_dollar_prices():
@@ -93,6 +115,30 @@ def get_source_name(url):
         "guardian": "🟠 الغارديان", "aa.com.tr": "🇹🇷 الأناضول",
         "skynewsarabia": "🔵 سكاي عربية", "aawsat": "🔷 الشرق الأوسط",
         "france24": "🇫🇷 فرانس 24", "dw.com": "🇩🇪 دويتشه فيله"
+        # 🔥 وكالات عربية رسمية ⭐
+        "sana.sy": "🇸🇾 سانا الرسمية",
+        "syria.tv": "📺 تلفزيون سوريا",
+        "wam.ae": "🟢 وام الإمارات",
+        "bna.bh": "🟣 بنا البحرين", 
+        "petra.gov.jo": "🟡 بترا الأردن",
+        "aps.dz": "🔵 واج الجزائر",
+        "saba.ye": "🔴 سبأ اليمن",
+        "spa.gov.sa": "⚫ واس السعودية",
+        "qna.org.qa": "🟤 قنا قطر",
+        "kuna.net.kw": "🟠 كونا الكويت",
+        "mapnews.ma": "🟢 ماف المغرب",
+        "ani.mr": "🟡 وما موريتانيا",
+        "suna-ed.org": "🔵 سونا السودان",
+        "omannews.gov.om": "🟣 عُمان",
+        "wafa.ps": "🟠 وفا فلسطين",
+        "wal.ps": "🔴 وال ليبيا",
+        "tapinfo.tn": "🟡 وات تونس",
+        "ina.iq": "⚫ واع العراق",
+        "mena.org.eg": "🟢 أ.ش.أ مصر",
+        
+        # 🌍 عالمية
+        "aljazeera": "🟢 الجزيرة نت",
+        "aa.com.tr": "🇹🇷 الأناضول"
     }
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة")
 
