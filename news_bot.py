@@ -43,13 +43,45 @@ RSS_FEEDS = [
 
 # كلمات مفتاحية لسوريا والمنطقة
 KEYWORDS = [
+    # سوريا عامة
     "Syria", "Syrian", "سوريا", "سوري", "السوريين",
-    "Damascus", "دمشق", "Aleppo", "حلب", "Idlib", "إدلب", "ادلب",
-    "Homs", "حمص", "Daraa", "درعا", "HTS", "هيئة تحرير الشام",
-    "SDF", "قسد", "Syrian president", "الرئيس السوري", "بشار الأسد",
-    "Turkey", "تركيا", "Israel", "إسرائيل", "Lebanon", "لبنان"
-]
 
+    # المحافظات الـ 14
+    "Damascus", "دمشق",
+    "Rif Dimashq", "ريف دمشق",
+    "Aleppo", "حلب",
+    "Homs", "حمص",
+    "Hama", "حماة",
+    "Latakia", "Lattakia", "اللاذقية",
+    "Tartus", "Tartous", "طرطوس",
+    "Idlib", "إدلب", "ادلب",
+    "Raqqa", "الرقة",
+    "Deir ez-Zor", "Deir Ezzor", "دير الزور", "ديرالزور",
+    "Hasakah", "Al-Hasakah", "الحسكة",
+    "Qamishli", "القامشلي",
+    "As-Suwayda", "Swedaa", "السويداء",
+    "Daraa", "درعا",
+
+    # مدن/مناطق إضافية ضمن المحافظات (اختياري)
+    "Quneitra", "القنيطرة",
+    "Palmyra", "تدمر",
+
+    # الشخصيات/الكيانات
+    "Ahmed al-Sharaa", "أحمد الشرع",
+    "Syrian president", "الرئيس السوري",
+    "Syrian minister", "وزير سوري",
+    "Syrian ambassador", "سفير سوري",
+
+    # منظمات ودول محيطة (إن كانت موجودة عندك، اتركها كما هي)
+    "UN Syria", "الأمم المتحدة سوريا",
+    "HTS", "هيئة تحرير الشام",
+    "SDF", "قسد",
+    "Turkey", "تركيا",
+    "Israel", "إسرائيل",
+    "Lebanon", "لبنان",
+    "Iraq", "العراق",
+    "Jordan", "الأردن",
+]
 IMPORTANT_WORDS = [
     "attack", "strike", "explosion", "war", "conflict",
     "killed", "injured", "dead", "arrest", "sanctions",
