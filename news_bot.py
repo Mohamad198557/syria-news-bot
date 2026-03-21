@@ -12,7 +12,7 @@ CHAT_ID = os.getenv("CHAT_ID")
 CHANNEL_ID = "-1003803988944"
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
 
-print("🚀 بوت أخبار سوريا - 20 وكالة + 14 محافظة")
+print("🚀 بوت أخبار سوريا")
 
 # 🔥 الكلمات المفتاحية الرئيسية (سوريا + الرئيس + 14 محافظة)
 KEYWORDS_SYRIA = [
@@ -164,7 +164,6 @@ def main():
     now_str = datetime.utcnow().strftime("%H:%M UTC")
     msg = f"<b>🇸🇾 أهم أخبار سوريا</b>\n\n"
     msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>\n"
-    msg += f"<i>📍 تغطية 14 محافظة + أحمد الشرع</i>\n\n"
     
     if articles:
         msg += "<b>📰 آخر الأخبار:</b>\n\n"
