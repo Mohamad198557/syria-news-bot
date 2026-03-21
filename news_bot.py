@@ -6,7 +6,7 @@ import logging
 import hashlib
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(name)
+logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
@@ -27,7 +27,7 @@ RSS_FEEDS = [
     "https://www.masrawy.com/rss/all/index.xml",
     "https://www.vetogate.com/rss.xml",
     "https://www.elbalad.news/rss",
-
+    
     # أجنبي
     "https://feeds.reuters.com/reuters/worldNews",
     "http://feeds.bbci.co.uk/news/world/rss.xml",
@@ -44,41 +44,37 @@ RSS_FEEDS = [
 # كلمات مفتاحية لسوريا والمنطقة
 KEYWORDS = [
     "Syria", "Syrian", "سوريا", "سوري", "السوريين",
-    "Damascus", "دمشق",
-    "Aleppo", "حلب",
-    "Idlib", "إدلب", "ادلب",
-    "Homs", "حمص",
-    "Daraa", "درعا",
-    "HTS", "Hayat Tahrir", "هيئة تحرير الشام",
-    "SDF", "قسد", "قوات سوريا الديمقراطية",
-    "Syrian president", "الرئيس السوري", "بشار الأسد",
-    "Turkey", "تركيا", "Ankara", "أنقرة",
-    "Israel", "إسرائيل", "الجولان", "Golan",
-    "Lebanon", "لبنان", "Iraq", "العراق", "Jordan", "الأردن",
+    "Damascus", "دمشق", "Aleppo", "حلب", "Idlib", "إدلب", "ادلب",
+    "Homs", "حمص", "Daraa", "درعا", "HTS", "هيئة تحرير الشام",
+    "SDF", "قسد", "Syrian president", "الرئيس السوري", "بشار الأسد",
+    "Turkey", "تركيا", "Israel", "إسرائيل", "Lebanon", "لبنان"
 ]
 
 IMPORTANT_WORDS = [
     "attack", "strike", "explosion", "war", "conflict",
     "killed", "injured", "dead", "arrest", "sanctions",
-    "هجوم", "قصف", "انفجار", "حرب", "نزاع",
-    "مقتل", "إصابة", "اعتقال", "غارة", "عملية",
+    "هجوم", "قصف", "انفجار", "حرب", "نزاع", "مقتل", "إصابة"
 ]
 
 TRANSLATE_URL = "https://libretranslate.de/translate"
 
 def get_source_name(url: str) -> str:
     u = url.lower()
-    if "aljazeera" in u: return "الجزيرة"
-    if "alarabiya" in u: return "العربية"
-    if "skynewsarabia" in u: return "سكاي نيوز عربية"
-    if "reuters" in u: return "رويترز"
-    if "bbc" in u: return "بي بي سي"
-    if "cnn" in u: return "سي إن إن"
-    if "nytimes" in u: return "نيويورك تايمز"
-    if "theguardian" in u: return "الغارديان"
-    if "apnews" in u or "ap.org" in u: return "أسوشيتد برس"
-    if "france24" in u: return "فرانس 24"
-    return "وكالة أنباء"
+    sources = {
+        "aljazeera": "🟢 الجزيرة",
+        "alarabiya": "🟠 العربية", 
+        "skynewsarabia": "🔵 سكاي نيوز",
+        "reuters": "🟡 رويترز",
+        "bbc": "🔴 بي بي سي",
+        "cnn": "🟣 CNN",
+        "nytimes": "⚫ نيويورك تايمز",
+        "theguardian": "🟠 الغارديان",
+        "apnews": "🔷 أسوشيتد برس"
+    }
+    for key, name in sources.items():
+        if key in u:
+            return name
+    return "📰 وكالة أنباء"
 
 def contains_keyword(text: str) -> bool:
     t = text.lower()
@@ -87,40 +83,34 @@ def contains_keyword(text: str) -> bool:
 def score_news(title: str, summary: str, source: str) -> int:
     text = (title + " " + summary).lower()
     score = 0
-
-    # وزن المصدر
-    for key in ["reuters", "bbc", "cnn", "aljazeera", "alarabiya"]:
-        if key in source.lower():
-            score += 2
-
-    # الكلمات المهمة
+    
+    # وزن المصادر الكبرى
+    top_sources = ["رويترز", "bbc", "cnn", "الجزيرة", "العربية"]
+    if any(s in source for s in top_sources):
+        score += 2
+    
+    # كلمات مهمة
     for w in IMPORTANT_WORDS:
         if w.lower() in text:
             score += 2
-
-    # الكلمات المفتاحية لسوريا
+    
+    # كلمات سوريا
     for w in KEYWORDS:
         if w.lower() in text:
             score += 3
-
+    
     return score
 
 def translate_to_arabic(text: str) -> str:
     try:
-        data = {
-            "q": text[:300],
-            "source": "auto",
-            "target": "ar",
-            "format": "text",
-        }
+        data = {"q": text[:300], "source": "auto", "target": "ar", "format": "text"}
         r = requests.post(TRANSLATE_URL, json=data, timeout=10)
         if r.status_code == 200:
-            return r.json().get("translatedText", text)
-        return text
-    except Exception as e:
-        logger.warning(f"ترجمة فشلت: {e}")
+            return r.json().get("translatedText", text[:100])
+    except:
+        pass
+    return text[:100] + "..."
 
-        return text
 def send_telegram(message: str) -> None:
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data = {
@@ -129,85 +119,70 @@ def send_telegram(message: str) -> None:
         "parse_mode": "HTML",
         "disable_web_page_preview": False,
     }
-    r = requests.post(url, data=data, timeout=20)
-    if r.status_code != 200:
-        logger.error(f"Telegram error: {r.status_code} - {r.text}")
+    try:
+        r = requests.post(url, data=data, timeout=20)
+        logger.info(f"Telegram: {r.status_code}")
+    except Exception as e:
+        logger.error(f"Telegram error: {e}")
 
 def run_once():
-    logger.info("بدء جمع الأخبار...")
+    logger.info("🚀 بدء جمع الأخبار من 20 وكالة...")
     articles = []
-
-    for feed_url in RSS_FEEDS:
+    
+    for i, feed_url in enumerate(RSS_FEEDS):
         try:
+            logger.info(f"فحص {i+1}: {get_source_name(feed_url)}")
             source_name = get_source_name(feed_url)
             feed = feedparser.parse(feed_url)
-            for entry in feed.entries[:15]:  # آخر 15 خبر من كل مصدر
+            
+            for entry in feed.entries[:10]:
                 title = getattr(entry, "title", "") or ""
-                summary = getattr(entry, "summary", "") or ""
+                summary = getattr(entry, "summary", "") or getattr(entry, "description", "")
                 link = getattr(entry, "link", "")
-
-                text = title + " " + summary
-                if not contains_keyword(text):
+                
+                if not link or not contains_keyword(title + " " + summary):
                     continue
-
-                s = score_news(title, summary, feed_url)
-                if s < 5:
-                    continue
-
-                articles.append({
-                    "title": title,
-                    "summary": summary,
-                    "link": link,
-                    "source": source_name,
-                    "score": s,
-                })
+                
+                score = score_news(title, summary, source_name)
+                if score >= 5:
+                    articles.append({
+                        "title": title,
+                        "summary": summary[:200],
+                        "link": link,
+                        "source": source_name,
+                        "score": score
+                    })
         except Exception as e:
-            logger.error(f"خطأ في قراءة {feed_url}: {e}")
-
+            logger.error(f"خطأ في {feed_url}: {e}")
+    
     if not articles:
-        logger.info("لا توجد أخبار مطابقة اليوم.")
-        send_telegram("📭 لا توجد أخبار مهمة عن سوريا في الوقت الحالي.")
+        send_telegram("📭 لا توجد أخبار مهمة عن سوريا الآن.")
         return
-
-    # ترتيب واختيار أهم 10
+    
+    # ترتيب وأفضل 8 أخبار
     articles.sort(key=lambda x: x["score"], reverse=True)
-    top = articles[:10]
-
-    # بناء الرسالة
+    top_articles = articles[:8]
+    
+    # بناء الرسالة (محددة في سطر واحد لكل جزء)
     today = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-    msg = f"📰 <b>أهم أخبار سوريا والمنطقة الآن</b>
-
-"
-    msg += f"⏱ <i>تحديث تلقائي عبر GitHub Actions</i>
-"
-    msg += f"📅 <i>{today}</i>
-
-"
-
-    for i, art in enumerate(top, 1):
-        t_ar = translate_to_arabic(art["title"])
-        msg += f"<b>{i}.</b> {t_ar}
-"
-        msg += f"📻 <i>{art['source']}</i>
-"
-        msg += f"🔗 <a href="{art['link']}">رابط الخبر</a>
-
-"
-
-    # إضافة قسم "عن البوت"
-    msg += (
-        "——————————————
-"
-        "ℹ️ <b>عن البوت</b>
-"
-        "تم تصميم هذا البوت بواسطة: <b>محمد محمد جلال الخطيب</b>
-"
-        "Powered by: <b>طلاب كليات الإعلام || FMD</b>
-"
-    )
-
+    msg = f"<b>📰 أهم أخبار سوريا والمنطقة</b>\n\n⏱ تحديث: {today}\n\n"
+    
+    for i, art in enumerate(top_articles, 1):
+        title_ar = translate_to_arabic(art["title"])
+        msg += f"{i}. <b>{title_ar}</b>\n"
+        msg += f"📻 {art['source']} | ⭐{art['score']}\n"
+        msg += f"🔗 <a href='{art['link']}'>الرابط</a>\n\n"
+    
+    # قسم الاعتمادات
+    msg += "────────────────────\n"
+    msg += "<b>ℹ️ عن البوت:</b>\n"
+    msg += "تم تصميم هذا البوت بواسطة:\n"
+    msg += "<b>محمد محمد جلال الخطيب</b>\n\n"
+    msg += "<b>Powered by:</b>\n"
+    msg += "<b>طلاب كليات الإعلام || FMD</b>"
+    
     send_telegram(msg)
-    logger.info("تم إرسال الملخص بنجاح.")
+    logger.info(f"✅ تم إرسال {len(top_articles)} خبر")
 
-if name == "main":
+if __name__ == "__main__":
     run_once()
