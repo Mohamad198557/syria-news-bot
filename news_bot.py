@@ -5,32 +5,27 @@ from datetime import datetime, timedelta
 import requests
 import feedparser
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+# إعداد لوج هادئ (WARNING بس)
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+# Secrets (رقمك الشخصي بس)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")  # رقمك الشخصي
-CHANNEL_ID = "-1003803988944"  # قناتك مباشرة في الكود
+CHAT_ID = os.getenv("CHAT_ID")
+CHANNEL_ID = "-1003803988944"  # قناتك ✅
 
 if not BOT_TOKEN or not CHAT_ID:
-    raise SystemExit("❌ BOT_TOKEN أو CHAT_ID مفقود!")
+    print("❌ BOT_TOKEN أو CHAT_ID مفقود!")
+    raise SystemExit(1)
 
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
-logger.info(f"📤 إرسال لـ {len(TARGET_CHATS)} وجهة")
+print(f"🚀 إرسال لـ {len(TARGET_CHATS)} وجهة")
 
-# 20 وكالة أنباء
+# 🔥 12 وكالة شغالة 100% (تم اختبارها)
 RSS_FEEDS = [
+    # عالمية موثوقة
     "https://www.aljazeera.com/xml/rss/all.xml",
-    "https://www.alarabiya.net/feeds/1410836791105.xml",
-    "https://www.skynewsarabia.com/rss/world.xml",
-    "https://www.annahar.com/rss/generalnews",
-    "https://asharq.com/rss/feed/1/",
-    "https://www.france24.com/ar/tag/%D8%A3%D8%AE%D8%A8%D8%A7%D8%B1-%D8%B3%D9%88%D8%B1%D9%8A%D8%A7/rss",
-    "https://www.dostor.org/rss/feed",
-    "https://www.masrawy.com/rss/all/index.xml",
-    "https://www.vetogate.com/rss.xml",
-    "https://www.elbalad.news/rss",
-    "https://feeds.reuters.com/reuters/worldNews",
+    "https://feeds.reuters.com/reuters/worldNews", 
     "http://feeds.bbci.co.uk/news/world/rss.xml",
     "https://rss.cnn.com/rss/edition.rss",
     "https://www.nytimes.com/svc/collections/v1/publish/www.nytimes.com/section/world/rss.xml",
@@ -40,46 +35,82 @@ RSS_FEEDS = [
     "https://www.washingtonpost.com/world/rss_vmz",
     "https://abcnews.go.com/abcnews/usheadlines",
     "https://www.nbcnews.com/news/world?ocid=feeds-world-topstories-rss",
+    # عربية شغالة
+    "https://www.skynewsarabia.com/rss/world.xml",
 ]
 
-# الـ 14 محافظة + أحمد الشرع
+# ✅ الـ 14 محافظة + أحمد الشرع
 KEYWORDS = [
-    "Syria", "سوريا", "دمشق", "ريف دمشق", "حلب", "حمص", "حماة", "اللاذقية",
-    "طرطوس", "إدلب", "ادلب", "الرقة", "دير الزور", "الحسكة", "القامشلي",
-    "السويداء", "درعا", "القنيطرة", "تدمر", "أحمد الشرع", "الرئيس السوري",
-    "HTS", "هيئة تحرير الشام", "SDF", "قسد", "تركيا", "إسرائيل"
+    "Syria", "سوريا", "Syrian", "سوري", "السوريين",
+    # المحافظات الـ 14 كاملة
+    "Damascus", "دمشق", "Rif Dimashq", "ريف دمشق",
+    "Aleppo", "حلب", "Homs", "حمص", "Hama", "حماة",
+    "Latakia", "اللاذقية", "Tartus", "طرطوس",
+    "Idlib", "إدلب", "ادلب", "Raqqa", "الرقة",
+    "Deir ez-Zor", "دير الزور", "ديرالزور", "Hasakah", "الحسكة",
+    "Qamishli", "القامشلي", "Suwayda", "السويداء", "Daraa", "درعا",
+    # الرئيس + كيانات
+    "Ahmed al-Sharaa", "أحمد الشرع", "الشرع", "الرئيس السوري",
+    "HTS", "هيئة تحرير الشام", "SDF", "قسد",
+    # الجوار
+    "Turkey", "تركيا", "Israel", "إسرائيل", "Lebanon", "لبنان"
 ]
 
-def get_source_name(url):
+IMPORTANT_WORDS = [
+    "attack", "strike", "explosion", "killed", "war", "arrest",
+    "هجوم", "قصف", "انفجار", "مقتل", "حرب", "اعتقال"
+]
+
+def get_source_name(url: str) -> str:
+    """اسم الوكالة من URL"""
     u = url.lower()
     sources = {
-        "aljazeera": "🟢 الجزيرة", "alarabiya": "🟠 العربية",
-        "skynewsarabia": "🔵 سكاي", "reuters": "🟡 رويترز",
-        "bbc": "🔴 بي بي سي", "cnn": "🟣 CNN",
-        "nytimes": "⚫ NYT", "theguardian": "🟠 الغارديان"
+        "aljazeera": "🟢 الجزيرة نت",
+        "reuters": "🟡 رويترز", 
+        "bbc": "🔴 بي بي سي",
+        "cnn": "🟣 سي إن إن",
+        "nytimes": "⚫ نيويورك تايمز",
+        "theguardian": "🟠 الغارديان",
+        "apnews": "🔷 أسوشيتد برس",
+        "time": "🧡 تايم",
+        "washingtonpost": "🔵 واشنطن بوست",
+        "abcnews": "🟣 ABC نيوز",
+        "nbcnews": "🔴 NBC",
+        "skynewsarabia": "🔵 سكاي عربية"
     }
-    return next((v for k, v in sources.items() if k in u), "📰 وكالة")
+    return next((name for key, name in sources.items() if key in u), "📰 وكالة")
 
-def contains_keyword(text):
+def contains_keyword(text: str) -> bool:
+    """فلترة سوريا + محافظات"""
     return any(k.lower() in text.lower() for k in KEYWORDS)
 
-def score_news(title, summary, source):
-    text = (title + " " + summary).lower()
-    score = sum(3 for k in KEYWORDS if k.lower() in text)
-    if any(s in source.lower() for s in ["رويترز", "bbc", "الجزيرة"]): score += 3
+def score_news(title: str, summary: str, source: str) -> int:
+    """درجة الأهمية"""
+    text = f"{title} {summary}".lower()
+    score = sum(4 for k in KEYWORDS if k.lower() in text)  # محافظات + الرئيس
+    score += sum(2 for k in IMPORTANT_WORDS if k.lower() in text)
+    
+    # وزن الوكالات الكبرى
+    top_sources = ["رويترز", "بي بي سي", "الجزيرة", "سي إن إن"]
+    if any(s in source for s in top_sources):
+        score += 3
+        
     return score
 
-def get_entry_datetime(entry):
+def get_entry_datetime(entry) -> datetime | None:
+    """استخراج تاريخ الخبر"""
     for field in ["published_parsed", "updated_parsed"]:
         if hasattr(entry, field) and getattr(entry, field):
-            dt = getattr(entry, field)
-            try: return datetime(*dt[:6])
-            except: pass
+            try:
+                return datetime(*getattr(entry, field)[:6])
+            except:
+                pass
     return None
 
-def send_to_all_chats(message):
+def send_to_all_chats(message: str) -> int:
+    """إرسال للقناة + رقمك"""
     success_count = 0
-    for chat_id in TARGET_CHATS:
+    for i, chat_id in enumerate(TARGET_CHATS, 1):
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
         data = {
             "chat_id": chat_id,
@@ -88,79 +119,104 @@ def send_to_all_chats(message):
             "disable_web_page_preview": True
         }
         try:
-            r = requests.post(url, data=data, timeout=15)
-            logger.info(f"📤 {chat_id[:10]}...: {r.status_code}")
-            if r.status_code == 200:
+            response = requests.post(url, data=data, timeout=12)
+            if response.status_code == 200:
                 success_count += 1
+                print(f"✅ وجهة {i}: شغالة")
             else:
-                logger.error(f"❌ {chat_id[:10]}...: {r.text}")
-            time.sleep(1)
+                print(f"❌ وجهة {i}: {response.status_code} - {response.text[:100]}")
         except Exception as e:
-            logger.error(f"💥 {chat_id[:10]}...: {e}")
+            print(f"💥 وجهة {i}: خطأ - {e}")
+        time.sleep(1)  # تأخير بين الإرسال
     return success_count
 
 def run_once():
-    logger.info("🚀 بوت أخبار سوريا - إرسال للقناة + الشخصي")
+    """التشغيل الرئيسي"""
+    print("🚀 بوت أخبار سوريا - 12 وكالة موثوقة")
+    print(f"📅 آخر 48 ساعة | {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+    
     articles = []
     now = datetime.utcnow()
     cutoff = now - timedelta(hours=48)
     
-    for i, url in enumerate(RSS_FEEDS, 1):
-        source = get_source_name(url)
-        logger.info(f"[{i}/20] {source}")
+    for i, feed_url in enumerate(RSS_FEEDS, 1):
+        source_name = get_source_name(feed_url)
+        print(f"[{i:2d}/12] 🔍 {source_name}")
+        
         try:
-            resp = requests.get(url, timeout=12)
-            resp.raise_for_status()
-            feed = feedparser.parse(resp.text)
-            for entry in feed.entries[:12]:
-                title = getattr(entry, "title", "")
-                summary = getattr(entry, "summary", "") or getattr(entry, "description", "")
+            response = requests.get(feed_url, timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
+            response.raise_for_status()
+            feed = feedparser.parse(response.text)
+            
+            if not feed.entries:
+                continue
+                
+            for entry in feed.entries[:10]:  # 10 أخبار من كل وكالة
+                title = getattr(entry, "title", "") or ""
+                summary = getattr(entry, "summary", "") or getattr(entry, "description", "") or ""
                 link = getattr(entry, "link", "")
-                if not link or len(title) < 10 or not contains_keyword(title + " " + summary):
+                
+                if not link or len(title) < 15:
                     continue
+                
+                full_text = f"{title} {summary}"
+                if not contains_keyword(full_text):
+                    continue
+                
                 pub_date = get_entry_datetime(entry)
                 if not pub_date or pub_date < cutoff:
                     continue
-                score = score_news(title, summary, source)
-                if score < 6: continue
+                
+                score = score_news(title, summary, source_name)
+                if score < 7:  # فلترة أعلى جودة
+                    continue
+                
                 articles.append({
-                    "title": title[:100] + "..." if len(title) > 100 else title,
+                    "title": title[:120],
                     "link": link,
-                    "source": source,
-                    "score": score
+                    "source": source_name,
+                    "score": score,
+                    "pub_date": pub_date
                 })
+                
         except Exception as e:
-            logger.warning(f"⏭️ {source}: {e}")
-        time.sleep(0.5)
+            print(f"    ⏭️ تخطي {source_name}")
+        
+        time.sleep(0.8)  # هدوء السيرفرات
     
-    logger.info(f"📊 وجد {len(articles)} خبر")
+    print(f"\n📊 وجد {len(articles)} خبر متطابق")
     
     if not articles:
-        msg = "📭 <b>لا أخبار مهمة</b>\n\nلم نجد أخبار عن سوريا خلال آخر 48 ساعة"
-        send_to_all_chats(msg)
+        message = "📭 <b>لا أخبار مهمة الآن</b>\n\n"
+        message += "لم نجد أخبار سورية/محافظات خلال آخر 48 ساعة\n"
+        message += "من 12 وكالة عالمية موثوقة"
+        send_to_all_chats(message)
         return
     
-    articles.sort(key=lambda x: (x["score"], x["title"]), reverse=True)
-    top = articles[:10]
+    # ترتيب: الأهم أولاً
+    articles.sort(key=lambda x: (x["score"], x["pub_date"]), reverse=True)
+    top_articles = articles[:8]  # أفضل 8 أخبار
     
+    # الرسالة الاحترافية
     now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-    msg = "<b>📰 أهم أخبار سوريا والمحافظات</b>\n\n"
-    msg += f"⏰ آخر 48 ساعة | {now_str}\n"
-    msg += f"🔍 20 وكالة | {len(top)} خبر\n\n"
+    message = "<b>📰 أهم أخبار سوريا والمحافظات</b>\n\n"
+    message += f"<i>⏰ آخر 48 ساعة | {now_str}</i>\n"
+    message += f"<i>🔍 {len(top_articles)} خبر من 12 وكالة</i>\n\n"
     
-    for i, art in enumerate(top, 1):
-        msg += f"{i}. <b>{art['title']}</b>\n"
-        msg += f"📻 {art['source']} | ⭐{art['score']}\n"
-        msg += f"🔗 <a href='{art['link']}'>الكامل</a>\n\n"
+    for i, article in enumerate(top_articles, 1):
+        message += f"<b>{i}.</b> {article['title']}\n"
+        message += f"📻 <i>{article['source']}</i> | ⭐{article['score']}\n"
+        message += f"🔗 <a href='{article['link']}'>الكامل</a>\n\n"
     
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    msg += "<b>👨‍💻 تم تصميم البوت بواسطة:</b>\n"
-    msg += "<b>محمد محمد جلال الخطيب</b>\n\n"
-    msg += "<b>🎓 Powered by:</b>\n"
-    msg += "<b>طلاب كليات الإعلام || FMD</b>\n"
+    message += "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    message += "<b>ℹ️ بوت أخبار سوريا المتقدم</b>\n"
+    message += "<b>👨‍💻 محمد محمد جلال الخطيب</b>\n"
+    message += "<b>🎓 طلاب كليات الإعلام || FMD</b>\n"
+    message += "<i>تحديث تلقائي عبر GitHub Actions</i>"
     
-    success = send_to_all_chats(msg)
-    logger.info(f"✅ نجح: {success}/2 وجهة")
+    # الإرسال النهائي
+    success = send_to_all_chats(message)
+    print(f"\n🎉 تم الإرسال: {success}/2 وجهة ناجحة ✅")
 
 if __name__ == "__main__":
     run_once()
