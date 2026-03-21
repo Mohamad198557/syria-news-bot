@@ -150,7 +150,7 @@ def send_top_news(news_list):
 
     news_list = sorted(news_list, key=lambda x: x["score"], reverse=True)[:5]
 
-    message = "🚨 أهم أخبار سوريا الآن\n\n"
+    message = "🚨 أهم الأخبار عن سوريا من اكبر 20وكالة انباء حول العالم\n\n"
 
     for i, n in enumerate(news_list, 1):
         t = translate(n["title"])
@@ -160,7 +160,7 @@ def send_top_news(news_list):
 ⏰ {datetime.now().strftime('%H:%M')}
 
 ━━━━━━━━━━━━━━
-تم التصميم بواسطة محمد محمد جلال الخطيب  
+تم التصميم بواسطة: محمد محمد جلال الخطيب  
 Powered by: FMD || طلاب كليات الإعلام
 """
 
@@ -170,3 +170,5 @@ Powered by: FMD || طلاب كليات الإعلام
 def main():
     news = collect_news()
     send_top_news(news)
+if name == "main":
+    main()
