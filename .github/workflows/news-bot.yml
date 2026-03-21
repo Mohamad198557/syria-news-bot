@@ -16,5 +16,4 @@ jobs:
     - env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHAT_ID: ${{ secrets.CHAT_ID }}
-      run: python news_bot.py
- concurrency: {{ group: syria-news,}}
+    
