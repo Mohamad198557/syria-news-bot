@@ -13,8 +13,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 CHANNEL_ID = "-1003803988944"
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
+SEEN_ARTICLES = set()  # 🔥 تتبع الأخبار المرسلة (جديد)
 
-print("🚀 بوت أخبار سوريا - 20 وكالة + أسعار الذهب والدولار")
+print("🚀 بوت أخبار سوريا - 20 وكالة + أسعار الذهب والدولار - كل 30 دقيقة أخبار جديدة!")
 
 # 🔥 الكلمات المفتاحية الرئيسية (سوريا + الرئيس + 14 محافظة)
 KEYWORDS_SYRIA = [
@@ -69,8 +70,8 @@ def get_gold_dollar_prices():
         gold_price = "1,484,000"
         dollar_price = "11,950"
         
-        gold_matches = re.findall(r'1[\d,]{6,9}', text)
-        dollar_matches = re.findall(r'1[1-2],[\d]{3}', text)
+        gold_matches = re.findall(r'1[d,]{6,9}', text)
+        dollar_matches = re.findall(r'1[1-2],[d]{3}', text)
         
         if gold_matches:
             gold_price = gold_matches[0].replace(',', '')
@@ -126,11 +127,11 @@ def get_source_name(url):
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة")
 
 def get_rss_news():
-    """20 وكالة مع فلترة ذكية"""
+    """20 وكالة مع فلترة ذكية - أخبار جديدة فقط"""
     articles = []
     cutoff = datetime.utcnow() - timedelta(hours=24)
     
-    print("📰 فحص 20 وكالة أنباء...")
+    print("📰 فحص 20 وكالة أنباء (أخبار جديدة فقط)...")
     for i, url in enumerate(RSS_FEEDS, 1):
         if i % 4 == 0:
             print(f"   التقدم: {i}/{len(RSS_FEEDS)}")
@@ -162,14 +163,17 @@ def get_rss_news():
                                 pass
                     
                     if pub_date and pub_date > cutoff:
-                        articles.append({
-                            'title': title[:125],
-                            'link': getattr(entry, 'link', ''),
-                            'source': source_name,
-                            'date': pub_date
-                        })
-                        print(f"    ✅ خبر سوري ✓")
-                        break
+                        article_id = f"{title[:50]}{pub_date}"  # 🔥 معرف فريد
+                        if article_id not in SEEN_ARTICLES:  # 🔥 خبر جديد فقط
+                            articles.append({
+                                'title': title[:125],
+                                'link': getattr(entry, 'link', ''),
+                                'source': source_name,
+                                'date': pub_date
+                            })
+                            SEEN_ARTICLES.add(article_id)  # 🔥 حفظ الخبر
+                            print(f"    ✅ خبر سوري جديد ✓")
+                            break
         except Exception as e:
             print(f"    ⏭️ خطأ: {str(e)[:50]}")
         
@@ -209,28 +213,47 @@ def main():
     
     # الرسالة الاحترافية
     now_str = datetime.utcnow().strftime("%H:%M UTC")
-    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>\n\n"
+    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>
+
+"
     
-    msg += f"<b>💰 السوق اليوم ({now_str}):</b>\n"
-    msg += f"🪙 <b>ذهب عيار 21:</b> {gold_price} ليرة\n"
-    msg += f"💵 <b>دولار:</b> {dollar_price} ليرة\n\n"
+    msg += f"<b>💰 السوق اليوم ({now_str}):</b>
+"
+    msg += f"🪙 <b>ذهب عيار 21:</b> {gold_price} ليرة
+"
+    msg += f"💵 <b>دولار:</b> {dollar_price} ليرة
+
+"
     
-    msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>\n"
+    msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>
+"
     
     if articles:
-        msg += "<b>📰 آخر الأخبار:</b>\n\n"
-        for i, article in enumerate(articles[:8], 1):
-            msg += f"{i}. <b>{article['title']}</b>\n"
-            msg += f"{article['source']}\n"
-            msg += f"<a href=\"{article['link']}\">🔗 الكامل</a>\n\n"
+        msg += "<b>📰 آخر الأخبار:</b>
+
+"
+        for i, article in enumerate(articles[:8], 1):  # ✅ 8 روابط كاملة
+            msg += f"{i}. <b>{article['title']}</b>
+"
+            msg += f"{article['source']}
+"
+            msg += f"<a href="{article['link']}">🔗 الكامل</a>
+
+"
     else:
-        msg += "<b>📭 لا أخبار سورية الـ 24 ساعة الأخيرة</b>\n\n"
-        msg += "🔍 تم فحص 20 وكالة أنباء عالمية وعربية\n"
+        msg += "<b>📭 لا أخبار سورية جديدة الـ 24 ساعة الأخيرة</b>
+
+"
+        msg += "🔍 تم فحص 20 وكالة أنباء عالمية وعربية
+"
         msg += "🇸🇾 سانا + تلفزيون سوريا + الإخبارية"
     
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    msg += "<b>تم تطويره بواسطة:</b>\n"
-    msg += "<b>محمد محمد جلال الخطيب</b>\n"
+    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"
+    msg += "<b>تم تطويره بواسطة:</b>
+"
+    msg += "<b>محمد محمد جلال الخطيب</b>
+"
     msg += "<b>طلاب كليات الإعلام || FMD</b>"
     
     # الإرسال
@@ -242,7 +265,25 @@ def main():
         else:
             print(f"📱 فشل: {chat_id}")
     
-    print(f"\n🎉 النتيجة: {success_count}/2 وجهة | {len(articles)} خبر")
+    print(f"
+🎉 النتيجة: {success_count}/2 وجهة | {len(articles)} خبر جديد | إجمالي محفوظ: {len(SEEN_ARTICLES)}")
 
 if __name__ == "__main__":
-    main()
+    print("🚀 بدء تشغيل تلقائي كل 30 دقيقة - أخبار جديدة فقط!")
+    while True:
+        try:
+            main()
+            if len(SEEN_ARTICLES) > 1000:  # 🔥 تنظيف تلقائي
+                SEEN_ARTICLES.clear()
+                print("🧹 تم تنظيف قاعدة الأخبار (1000+)")
+            print("
+⏳ انتظار 30 دقيقة (1800 ثانية)...")
+            time.sleep(1800)
+        except KeyboardInterrupt:
+            print("
+🛑 تم إيقاف البوت بـ Ctrl+C")
+            break
+        except Exception as e:
+            print(f"❌ خطأ غير متوقع: {e}")
+            print("🔄 إعادة المحاولة خلال دقيقة...")
+            time.sleep(60)
