@@ -68,11 +68,7 @@ RSS_FEEDS = [
     "https://www.wal.ps/rss/",                       # 🔴 وال (ليبيا)
     "https://www.tapinfo.tn/rss",                    # 🟡 وات (تونس)
     "https://www.ina.iq/rss/",                       # ⚫ واع (العراق)
-    "https://www.mena.org.eg/rss/",                  # 🟢 أ.ش.أ (مصر)
-    
-    # 🌍 عالمية (موجودة)
-    "https://www.aljazeera.com/xml/rss/all.xml",
-    "https://www.aa.com.tr/ar/rss/default.aspx"
+    "https://www.mena.org.eg/rss/"                   # 🟢 أ.ش.أ (مصر)
 ]
 
 def get_gold_dollar_prices():
@@ -91,8 +87,8 @@ def get_gold_dollar_prices():
         dollar_price = "11,950"
         
         # 🔥 regex محسّن للأرقام السورية الكبيرة
-        gold_matches = re.findall(r'1[,\\d]{6,9}', text)
-        dollar_matches = re.findall(r'1[1-2],\\d{3}', text)
+        gold_matches = re.findall(r'1[\d,]{6,9}', text)
+        dollar_matches = re.findall(r'1[1-2],[\d]{3}', text)
         
         if gold_matches:
             gold_price = gold_matches[0].replace(',', '')
@@ -117,7 +113,7 @@ def contains_syria_keyword(text):
 def get_source_name(url):
     """أسماء الوكالات الجميلة"""
     sources = {
-        "sana.sy": "🇸🇾 سانا الرسمية", 
+        "sana": "🇸🇾 سانا الرسمية", 
         "syria.tv": "📺 تلفزيون سوريا",
         "alikhbariah": "📺 الإخبارية السورية", 
         "syriasteps": "🇸🇾 سورياستيبس",
@@ -158,7 +154,7 @@ def get_rss_news():
     print("📰 فحص 20 وكالة أنباء...")
     for i, url in enumerate(RSS_FEEDS, 1):
         if i % 4 == 0:
-            print(f"   التقدم: {i}/20")
+            print(f"   التقدم: {i}/{len(RSS_FEEDS)}")
         
         source_name = get_source_name(url)
         print(f"[{i:2d}] {source_name}")
@@ -180,87 +176,3 @@ def get_rss_news():
                     pub_date = None
                     for date_field in ['published_parsed', 'updated_parsed', 'created_parsed']:
                         if hasattr(entry, date_field):
-                            try:
-                                pub_date = datetime(*getattr(entry, date_field)[:6])
-                                break
-                            except:
-                                pass
-                    
-                    if pub_date and pub_date > cutoff:
-                        articles.append({
-                            'title': title[:125],
-                            'link': getattr(entry, 'link', ''),
-                            'source': source_name,
-                            'date': pub_date
-                        })
-                        print(f"    ✅ خبر سوري ✓")
-                        break
-        except Exception as e:
-            print(f"    ⏭️ خطأ")
-        
-        time.sleep(0.7)
-    
-    return sorted(articles, key=lambda x: x['date'], reverse=True)
-
-def send_telegram(chat_id, message):
-    """إرسال آمن"""
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = {
-        "chat_id": chat_id,
-        "text": message,
-        "parse_mode": "HTML",
-        "disable_web_page_preview": True
-    }
-    try:
-        r = requests.post(url, data=data, timeout=15)
-        return r.status_code == 200
-    except:
-        return False
-
-def main():
-    print("🎯 بوت أخبار سوريا + الأسعار يعمل...")
-    
-    # 🔥 الأسعار أولاً
-    gold_price, dollar_price = get_gold_dollar_prices()
-    print(f"💰 ذهب: {gold_price} | دولار: {dollar_price}")
-    
-    # جمع الأخبار
-    articles = get_rss_news()
-    
-    # الرسالة الاحترافية **مُصححة**
-    now_str = datetime.utcnow().strftime("%H:%M UTC")
-    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>\\n\\n"
-    
-    msg += f"<b>💰 السوق اليوم ({now_str}):</b>\\n"
-    msg += f"🪙 <b>ذهب عيار 21:</b> {gold_price} ليرة\\n"
-    msg += f"💵 <b>دولار:</b> {dollar_price} ليرة\\n\\n"
-    
-    msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>\\n"
-    
-    if articles:
-        msg += "<b>📰 آخر الأخبار:</b>\\n\\n"
-        for i, article in enumerate(articles[:8], 1):
-            msg += f"{i}. <b>{article['title']}</b>\\n"
-            msg += f"{article['source']}\\n"
-            msg += f"<a href=\"{article['link']}\">🔗 الكامل</a>\\n\\n"
-    else:
-        msg += "<b>📭 لا أخبار سورية الـ 24 ساعة الأخيرة</b>\\n\\n"
-        msg += "🔍 تم فحص 20 وكالة أنباء عالمية وعربية\\n"
-        msg += "🇸🇾 سانا + تلفزيون سوريا + الإخبارية"
-    
-    msg += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n"
-    msg += "<b>تم تطويره بواسطة:</b>\\n"
-    msg += "<b>محمد محمد جلال الخطيب</b>\\n"
-    msg += "<b>طلاب كليات الإعلام || FMD</b>"
-    
-    # الإرسال
-    success_count = 0
-    for chat_id in TARGET_CHATS:
-        if send_telegram(chat_id, msg):
-            success_count += 1
-            print(f"📱 نجح: {chat_id}")
-    
-    print(f"\n🎉 النتيجة: {success_count}/2 وجهة | {len(articles)} خبر")
-
-if __name__ == "__main__":
-    main()
