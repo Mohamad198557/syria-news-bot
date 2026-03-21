@@ -1,19 +1,30 @@
 name: 📰 بوت سوريا الشامل
+
 on:
   schedule:
-    - cron: "*/30 * * * *"  # كل نص ساعة
-  workflow_dispatch:
+    - cron: "*/30 * * * *"  # يعمل كل 30 دقيقة
+  workflow_dispatch: # للتشغيل اليدوي للتجربة
 
 jobs:
   news:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - run: pip install -r requirements.txt
-    - env:
-        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        CHAT_ID: ${{ secrets.CHAT_ID }}
-    
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip' # تسريع التثبيت في المرات القادمة
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests feedparser beautifulsoup4
+
+      - name: Run News Bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python main.py
