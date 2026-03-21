@@ -175,14 +175,13 @@ def main():
     
     # الرسالة الاحترافية **مُصححة**
     now_str = datetime.utcnow().strftime("%H:%M UTC")
-    msg = f"<b>🇸🇾 أهم أخبار سوريا + الأسعار</b>\n\n"
+    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>\n\n"
     
     msg += f"<b>💰 السوق اليوم ({now_str}):</b>\n"
     msg += f"🪙 <b>ذهب عيار 21:</b> {gold_price} ليرة\n"
     msg += f"💵 <b>دولار:</b> {dollar_price} ليرة\n\n"
     
     msg += f"<i>⏰ {now_str} | 20 وكالة أنباء</i>\n"
-    msg += f"<i>📍 تغطية 14 محافظة + أحمد الشرع</i>\n\n"
     
     if articles:
         msg += "<b>📰 آخر الأخبار:</b>\n\n"
