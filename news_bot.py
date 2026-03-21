@@ -267,7 +267,7 @@ def run_once():
 "
             message += article['source'] + "
 "
-            message += "<a href='" + article['link'] + "'>🔗 قراءة الكامل</a>
+message += "<a href=\"" + article['link'] + "\">🔗 قراءة الكامل</a>\n\n"
 
 "
         
