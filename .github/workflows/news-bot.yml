@@ -2,29 +2,32 @@ name: 📰 بوت سوريا الشامل
 
 on:
   schedule:
-    - cron: "*/30 * * * *"  # يعمل كل 30 دقيقة
-  workflow_dispatch: # للتشغيل اليدوي للتجربة
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write # ضروري للسماح للبوت بحفظ الذاكرة
 
 jobs:
   news:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip' # تسريع التثبيت في المرات القادمة
-
-      - name: Install Dependencies
-        run: |
-          pip install --upgrade pip
-          pip install requests feedparser beautifulsoup4
-
-      - name: Run News Bot
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: python main.py
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - run: pip install -r requirements.txt
+    - name: Run Bot
+      env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        CHAT_ID: ${{ secrets.CHAT_ID }}
+      run: python main.py
+    
+    # هذه الخطوة لحفظ الذاكرة ومنع التكرار في المرة القادمة
+    - name: Commit and Push changes
+      run: |
+        git config --global user.name "NewsBot"
+        git config --global user.email "bot@github.com"
+        git add sent_articles.txt || true
+        git commit -m "Update sent articles log" || true
+        git push || true
