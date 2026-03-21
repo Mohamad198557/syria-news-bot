@@ -1,7 +1,6 @@
 import os
 import time
 import logging
-import re
 import requests
 import feedparser
 from datetime import datetime, timedelta
