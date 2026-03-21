@@ -13,7 +13,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 CHANNEL_ID = "-1003803988944"
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
-SEEN_ARTICLES = set()  # 🔥 تتبع الأخبار المرسلة (جديد)
+SEEN_ARTICLES = set()
 
 print("🚀 بوت أخبار سوريا - 20 وكالة + أسعار الذهب والدولار - كل 30 دقيقة أخبار جديدة!")
 
@@ -163,15 +163,15 @@ def get_rss_news():
                                 pass
                     
                     if pub_date and pub_date > cutoff:
-                        article_id = f"{title[:50]}{pub_date}"  # 🔥 معرف فريد
-                        if article_id not in SEEN_ARTICLES:  # 🔥 خبر جديد فقط
+                        article_id = f"{title[:50]}{pub_date}"
+                        if article_id not in SEEN_ARTICLES:
                             articles.append({
                                 'title': title[:125],
                                 'link': getattr(entry, 'link', ''),
                                 'source': source_name,
                                 'date': pub_date
                             })
-                            SEEN_ARTICLES.add(article_id)  # 🔥 حفظ الخبر
+                            SEEN_ARTICLES.add(article_id)
                             print(f"    ✅ خبر سوري جديد ✓")
                             break
         except Exception as e:
@@ -213,7 +213,7 @@ def main():
     
     # الرسالة الاحترافية
     now_str = datetime.utcnow().strftime("%H:%M UTC")
-    msg = f"<b>🇸🇾 أهم أخبار سوريا من ابرز وكالات الأنباء</b>
+    msg = f"<b>🇸🇾 أهم أخبار سوريا من أبرز وكالات الأنباء</b>
 
 "
     
@@ -232,7 +232,7 @@ def main():
         msg += "<b>📰 آخر الأخبار:</b>
 
 "
-        for i, article in enumerate(articles[:8], 1):  # ✅ 8 روابط كاملة
+        for i, article in enumerate(articles[:8], 1):
             msg += f"{i}. <b>{article['title']}</b>
 "
             msg += f"{article['source']}
@@ -273,7 +273,7 @@ if __name__ == "__main__":
     while True:
         try:
             main()
-            if len(SEEN_ARTICLES) > 1000:  # 🔥 تنظيف تلقائي
+            if len(SEEN_ARTICLES) > 1000:
                 SEEN_ARTICLES.clear()
                 print("🧹 تم تنظيف قاعدة الأخبار (1000+)")
             print("
