@@ -1,28 +1,19 @@
-name: 📰 Syria News Bot - كل 15 دقيقة
+name: 📰 بوت سوريا الشامل
 on:
-  # تشغيل تلقائي كل 15 دقيقة
   schedule:
-    - cron: "*/15 * * * *"    # كل ربع ساعة
-  
-  # تشغيل يدوي أيضاً
+    - cron: "*/30 * * * *"  # كل نص ساعة
   workflow_dispatch:
 
 jobs:
-  send-news:
+  news:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - name: إعداد Python
-      uses: actions/setup-python@v5
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    
-    - name: تثبيت المكتبات
-      run: pip install -r requirements.txt
-    
-    - name: تشغيل البوت
-      env:
+    - run: pip install -r requirements.txt
+    - env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHAT_ID: ${{ secrets.CHAT_ID }}
       run: python news_bot.py
