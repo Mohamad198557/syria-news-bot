@@ -226,8 +226,9 @@ def send_telegram(chat_id, message):
 
 def run_once():
     """تشغيل دورة واحدة كاملة"""
-    print("
-" + "="*60)
+  temp_link = "<a href=\"" + article['link'] + "\">🔗 قراءة الكامل</a>"
+message += temp_link + "\n\n"
+
     print("⏰ [" + datetime.now().strftime('%H:%M:%S') + "] بدء دورة جديدة")
     
     # تحميل الأخبار السابقة
