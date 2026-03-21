@@ -13,7 +13,7 @@ CHAT_ID = os.getenv("CHAT_ID")
 CHANNEL_ID = "-1003803988944"
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
 
-print("🚀 بوت سوريا الشامل  ")
+print("🚀 بوت سوريا الشامل - 20 وكالة + 10 X + 14 محافظة")
 
 # 🔥 الكلمات المفتاحية الرئيسية (سوريا + الرئيس + 14 محافظة)
 KEYWORDS_SYRIA = [
@@ -68,7 +68,6 @@ RSS_FEEDS = [
 
 # 🔥 10 حسابات X رسمية سورية
 X_ACCOUNTS = [
-    {"user": "Ahmadmuaffaq", "name": "أحمد معفق"},
     {"user": "AH_AlSharaa", "name": "أحمد الشرع الرئيس"},
     {"user": "syrianmofaex", "name": "خارجية سوريا"},
     {"user": "Sy_Defense", "name": "وزارة الدفاع"},
