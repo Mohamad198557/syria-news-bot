@@ -1,34 +1,40 @@
-name: 📰 بوت سوريا الشامل
+name: Syria News Bot Daily Run
 
 on:
   schedule:
-    # سيتم التشغيل كل ساعة مرتين (عند الدقيقة 13 و الدقيقة 43) هرباً من زحمة السيرفرات
-    - cron: "13,43 * * * *"  
-  workflow_dispatch:
-
-permissions:
-  contents: write # ضروري للسماح للبوت بحفظ الذاكرة
+    # تشغيل كل 30 دقيقة (في الدقيقة 10 و 40)
+    # ملاحظة: توقيت GitHub يعتمد على UTC (جرينتش)
+    - cron: '10,40 * * * *'
+  workflow_dispatch: # يتيح لك تشغيل البوت يدوياً للتجربة
 
 jobs:
-  news:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
-    - run: pip install -r requirements.txt
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests feedparser beautifulsoup4 deep-translator
+
     - name: Run Bot
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHAT_ID: ${{ secrets.CHAT_ID }}
-      run: python main.py
-    
-    # هذه الخطوة لحفظ الذاكرة ومنع التكرار في المرة القادمة
-    - name: Commit and Push changes
+      run: python bot.py
+
+    - name: Commit and Push DB change
       run: |
-        git config --global user.name "NewsBot"
-        git config --global user.email "bot@github.com"
-        git add sent_articles.txt || true
-        git commit -m "Update sent articles log" || true
-        git push || true
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add sent_articles.txt
+        git commit -m "Update sent articles DB [skip ci]" || exit 0
+        git push
