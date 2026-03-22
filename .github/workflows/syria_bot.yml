@@ -2,18 +2,23 @@ name: Syria News Bot Daily Run
 
 on:
   schedule:
-    # تشغيل كل 30 دقيقة (في الدقيقة 10 و 40)
-    # ملاحظة: توقيت GitHub يعتمد على UTC (جرينتش)
+    # التشغيل كل 30 دقيقة (في الدقيقة 10 و 40)
     - cron: '10,40 * * * *'
-  workflow_dispatch: # يتيح لك تشغيل البوت يدوياً للتجربة
+  workflow_dispatch: # للتشغيل اليدوي عند التجربة
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    # منح صلاحيات الكتابة بشكل صريح داخل الملف (إضافة أمان)
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+      with:
+        persist-credentials: true
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -35,6 +40,8 @@ jobs:
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        # التأكد من وجود الملف لتجنب خطأ git add في أول مرة
+        touch sent_articles.txt 
         git add sent_articles.txt
         git commit -m "Update sent articles DB [skip ci]" || exit 0
         git push
