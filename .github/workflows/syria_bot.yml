@@ -2,33 +2,38 @@ name: Syria News Bot Daily Run
 
 on:
   schedule:
-    # التشغيل كل 30 دقيقة (في الدقيقة 10 و 40)
     - cron: '10,40 * * * *'
-  workflow_dispatch: # للتشغيل اليدوي عند التجربة
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
-    # منح صلاحيات الكتابة بشكل صريح داخل الملف (إضافة أمان)
     permissions:
       contents: write
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
+        fetch-depth: 1
         persist-credentials: true
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
 
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests feedparser beautifulsoup4 deep-translator
+      run: pip install -r requirements.txt
 
     - name: Run Bot
       env:
@@ -40,8 +45,10 @@ jobs:
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        # التأكد من وجود الملف لتجنب خطأ git add في أول مرة
-        touch sent_articles.txt 
         git add sent_articles.txt
-        git commit -m "Update sent articles DB [skip ci]" || exit 0
+        if git diff --quiet --cached; then
+          echo "No changes"
+          exit 0
+        fi
+        git commit -m "Update sent articles DB [skip ci]"
         git push
