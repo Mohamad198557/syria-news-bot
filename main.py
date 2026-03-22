@@ -58,7 +58,6 @@ def load_sent_articles():
     return set()
 
 def save_sent_articles(links_list):
-    """حفظ قائمة الروابط في الذاكرة (تُستدعى فقط بعد نجاح الإرسال)"""
     if not links_list: return
     try:
         with open(DB_FILE, "a", encoding='utf-8') as f:
@@ -75,23 +74,17 @@ def translate_text(text):
     except: return text
 
 def get_syria_weather():
-    """جلب الطقس بطريقة مستقرة ومضمونة 100% بدون مكتبات معقدة"""
     weather_report = "🌡️ <b>حالة الطقس في المحافظات:</b>\n"
-    cities = {
-        "Damascus": "دمشق", "Aleppo": "حلب", "Homs": "حمص", 
-        "Deir ez-Zor": "دير الزور", "Daraa": "درعا", "Latakia": "اللاذقية"
-    }
+    cities = {"Damascus": "دمشق", "Aleppo": "حلب", "Homs": "حمص", "Deir ez-Zor": "دير الزور", "Daraa": "درعا", "Latakia": "اللاذقية"}
     try:
         for eng, arb in cities.items():
             url = f"https://wttr.in/{eng}?format=%c+%t"
-            r = requests.get(url, timeout=5) # 5 ثوانٍ فقط لتجنب التأخير
+            r = requests.get(url, timeout=5)
             if r.status_code == 200:
                 temp_data = r.text.strip().replace('+', '')
                 weather_report += f"{temp_data} : {arb}\n"
         return weather_report + "\n"
-    except Exception as e:
-        logging.error(f"Weather Error: {e}")
-        return "" # في حال تعطل موقع الطقس، يتجاهله الكود ولا يتوقف
+    except: return ""
 
 def get_gold_dollar_prices():
     try:
@@ -104,11 +97,7 @@ def get_gold_dollar_prices():
     except: return "1,517,000", "11,950"
 
 def get_source_name(url):
-    sources = {
-        "sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", "aljazeera": "🟢 الجزيرة",
-        "bbc": "🔴 BBC", "guardian": "🟠 الغارديان", "nytimes": "🇺🇸 نيويورك تايمز",
-        "aa.com.tr": "🇹🇷 الأناضول", "skynewsarabia": "🔵 سكاي عربية"
-    }
+    sources = {"sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", "aljazeera": "🟢 الجزيرة", "bbc": "🔴 BBC", "guardian": "🟠 الغارديان", "nytimes": "🇺🇸 نيويورك تايمز", "aa.com.tr": "🇹🇷 الأناضول", "skynewsarabia": "🔵 سكاي عربية"}
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة")
 
 def get_rss_news(sent_list):
@@ -119,20 +108,16 @@ def get_rss_news(sent_list):
             source = get_source_name(url)
             for entry in feed.entries[:8]:
                 link = getattr(entry, 'link', '')
-                if link in sent_list: continue # تخطي الأخبار القديمة
-                
+                if link in sent_list: continue
                 title_or = getattr(entry, 'title', '')
                 title_ar = translate_text(title_or)
                 full_txt = f"{title_or} {title_ar} {getattr(entry, 'summary', '')}"
-                
                 if any(k.lower() in full_txt.lower() for k in KEYWORDS_SYRIA):
                     data = {'title': title_ar[:125].strip(), 'link': link, 'source': source}
-                    
                     if any(bk.lower() in full_txt.lower() for bk in BREAKING_KEYWORDS):
                         breaking.append(data)
                     else:
                         normal.append(data)
-                        
                 if len(normal) >= 12: break
         except: continue
     return breaking, normal[:12]
@@ -140,10 +125,7 @@ def get_rss_news(sent_list):
 def send_telegram(chat_id, message, is_breaking=False):
     if not chat_id: return False
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": chat_id, "text": message, "parse_mode": "HTML",
-        "disable_web_page_preview": True, "disable_notification": not is_breaking
-    }
+    payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True, "disable_notification": not is_breaking}
     try:
         r = requests.post(url, json=payload, timeout=15)
         return r.status_code == 200
@@ -151,20 +133,18 @@ def send_telegram(chat_id, message, is_breaking=False):
 
 def main():
     if not BOT_TOKEN or not CHAT_ID: return
-
     sent_list = load_sent_articles()
     breaking_news, normal_news = get_rss_news(sent_list)
-    
-    links_to_save = [] # قائمة الروابط التي سيتم حفظها لاحقاً
+    links_to_save = []
 
-    # 1. إرسال العاجل فوراً
+    # 1. إرسال العاجل
     for b in breaking_news:
         msg = f"🚨 <b>خبر عاجل</b>\n\n📰 <b>{b['title']}</b>\n\n{b['source']} | <a href='{b['link']}'>🔗 التفاصيل</a>"
         for cid in TARGET_CHATS: 
             if send_telegram(cid, msg, True):
-                links_to_save.append(b['link']) # نحفظه فقط إذا نجح الإرسال
+                links_to_save.append(b['link'])
     
-    # 2. إرسال النشرة العادية
+    # 2. إرسال النشرة العادية (التصحيح هنا)
     if normal_news:
         weather_p = get_syria_weather()
         gold_p, dollar_p = get_gold_dollar_prices()
@@ -179,22 +159,20 @@ def main():
         for i, art in enumerate(normal_news, 1):
             msg += f"{i}. <b>{art['title']}</b>\n└ {art['source']} | <a href='{art['link']}'>🔗 الكامل</a>\n\n"
 
-    msg += "━━━━━━━━━━━━━━━━━━\n"
-    msg += "<b>تم التطوير بواسطة:</b>\n"
-    msg += "<b>محمد محمد جلال الخطيب</b>\n"
-    msg += "🎓 طلاب كليات الإعلام || FMD"
+        msg += "━━━━━━━━━━━━━━━━━━\n"
+        msg += "<b>تم التطوير بواسطة:</b>\n"
+        msg += "<b>محمد محمد جلال الخطيب</b>\n"
+        msg += "🎓 طلاب كليات الإعلام || FMD"
 
         success = False
         for cid in TARGET_CHATS: 
             if send_telegram(cid, msg, False):
                 success = True
         
-        # نحفظ الأخبار العادية في الذاكرة فقط إذا تم إرسال الرسالة الكبيرة بنجاح
         if success:
             for art in normal_news:
                 links_to_save.append(art['link'])
 
-    # 3. تحديث الذاكرة في النهاية (السر البرمجي الذي سيمنع الخطأ)
     save_sent_articles(links_to_save)
 
 if __name__ == "__main__":
