@@ -179,9 +179,11 @@ def main():
         for i, art in enumerate(normal_news, 1):
             msg += f"{i}. <b>{art['title']}</b>\n└ {art['source']} | <a href='{art['link']}'>🔗 الكامل</a>\n\n"
 
-        msg += "━━━━━━━━━━━━━━━━━━"
-        msg += " تم التطوير بواسطة : محمد محمد جلال الخطيب"
-        msg += " طلاب كليات الإعلام||FMD "
+    msg += "━━━━━━━━━━━━━━━━━━\n"
+    msg += "<b>تم التطوير بواسطة:</b>\n"
+    msg += "<b>محمد محمد جلال الخطيب</b>\n"
+    msg += "🎓 طلاب كليات الإعلام || FMD"
+
         success = False
         for cid in TARGET_CHATS: 
             if send_telegram(cid, msg, False):
