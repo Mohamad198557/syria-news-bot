@@ -366,6 +366,13 @@ def main():
     
     elapsed = time.time() - start_time
     logging.info(f"✅ تم إكمال التشغيل في {elapsed:.2f} ثانية")
+    
+        # أضف هذا السطر مؤقتاً قبل save_sent_articles في نهاية main
+    if not normal_news and not breaking_news:
+        logging.info("لم يتم العثور على أخبار جديدة لإرسالها.")
+        # يمكنك تفعيل السطر التالي للتأكد من وصول التنبيهات إليك
+        # send_telegram(CHAT_ID, "🔍 البوت يعمل بنجاح ولكن لا توجد أخبار جديدة حالياً.")
+        
 
 if __name__ == "__main__":
     main()
