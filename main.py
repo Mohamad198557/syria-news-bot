@@ -100,8 +100,8 @@ def get_gold_dollar_prices():
         text = soup.get_text()
         gold = re.findall(r'1[,\\d]{6,9}', text)
         dollar = re.findall(r'1[1-2],\\d{3}', text)
-        return (gold[0] if gold else "1,484,000"), (dollar[0] if dollar else "11,950")
-    except: return "1,484,000", "11,950"
+        return (gold[0] if gold else "1,517,000"), (dollar[0] if dollar else "11,950")
+    except: return "1,517,000", "11,950"
 
 def get_source_name(url):
     sources = {
