@@ -38,28 +38,21 @@ KEYWORDS_SYRIA = [
 
 BREAKING_KEYWORDS = ["عاجل", "Breaking", "Urgent", "فوري", "Alert"]
 
-# مصادر الأخبار الكاملة (20 مصدر)
+# مصادر الأخبار المحدثة والمنقحة (الأسرع والأكثر توافقاً مع البوتات)
 RSS_FEEDS = [
+    "https://arabic.rt.com/rss/",  # روسيا اليوم (غزير جداً وسريع)
+    "https://www.skynewsarabia.com/rss/middle-east.xml",  # سكاي نيوز (الشرق الأوسط)
+    "http://feeds.bbci.co.uk/arabic/rss.xml",  # BBC عربي
+    "https://www.france24.com/ar/rss",  # فرانس 24 عربي
+    "https://www.enabbaladi.net/feed/",  # عنب بلدي (مصدر سوري هام جداً)
+    "https://alwatan.sy/feed",  # جريدة الوطن السورية
     "https://www.aljazeera.com/xml/rss/all.xml",
-    "http://feeds.bbci.co.uk/news/world/rss.xml",
-    "https://www.theguardian.com/world/rss",
-    "https://www.nytimes.com/svc/collections/v1/publish/www.nytimes.com/section/world/rss.xml",
-    "https://trt.global/arabi/rss/",
-    "https://www.france24.com/en/rss",
-    "https://www.dw.com/en/rss-top-stories",
-    "https://www.euronews.com/rss.xml",
-    "https://www.aa.com.tr/ar/rss/default.aspx",
-    "https://www.spa.gov.sa/rss",
-    "https://www.wam.ae/ar/rss",
-    "https://www.qna.org.qa/rss",
-    "https://www.kuna.net.kw/rss/",
-    "https://ina.iq/rss/",
-    "https://aawsat.com/rss-feed",
-    "https://www.skynewsarabia.com/rss/world.xml",
-    "https://www.syria.tv/feed",
-    "https://syriasteps.com/feed/",
-    "https://alikhbariah.com/feed/",
-    "https://sana.sy/?feed=rss2"
+    "https://sana.sy/?feed=rss2",  # سانا (المصدر الرسمي)
+    "https://www.syria.tv/feed",  # تلفزيون سوريا
+    "https://syriasteps.com/feed/",  # سيريا ستيبس
+    "https://alikhbariah.com/feed/",  # الإخبارية
+    "https://aawsat.com/rss-feed",  # الشرق الأوسط
+    "https://www.alarabiya.net/.mrss/ar/middle-east.xml", # العربية
 ]
 
 # حكم يومية
@@ -133,12 +126,25 @@ def translate_text(text):
         save_translation_to_cache(text, translation)
         return translation
     except: return text
-
 @lru_cache(maxsize=128)
 def get_source_name(url):
-    sources = {"sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", "aljazeera": "🟢 الجزيرة", "bbc": "🔴 BBC", "guardian": "🟠 الغارديان", "nytimes": "🇺🇸 نيويورك تايمز", "aa.com.tr": "🇹🇷 الأناضول", "skynewsarabia": "🔵 سكاي عربية", "france24": "🇫🇷 فرانس 24", "rt": "🇷🇺 روسيا اليوم", "dw.com": "🇩🇪 DW", "trt.global": "🇹🇷 TRT", "spa.gov.sa": "🇸🇦 واس", "wam.ae": "🇦🇪 وام"}
+    """استخراج اسم المصدر مع إيموجي مميز"""
+    sources = {
+        "sana.sy": "🇸🇾 سانا", 
+        "syria.tv": "📺 تلفزيون سوريا", 
+        "enabbaladi": "🍇 عنب بلدي",
+        "alwatan.sy": "📰 جريدة الوطن",
+        "syriasteps": "🇸🇾 سيريا ستيبس",
+        "arabic.rt.com": "🇷🇺 روسيا اليوم",
+        "skynewsarabia": "🔵 سكاي نيوز", 
+        "bbci.co.uk": "🔴 BBC عربي", 
+        "france24.com/ar": "🇫🇷 فرانس 24", 
+        "aawsat": "🗞️ الشرق الأوسط",
+        "alarabiya": "🟩 العربية"
+        "aljazeera": "🟢 الجزيرة", "bbc": "🔴 BBC", 
+    }
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة أنباء")
-
+    
 def fetch_feed(feed_url, sent_list):
     breaking, normal = [], []
     try:
