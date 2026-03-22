@@ -97,8 +97,8 @@ def translate_text(text):
     except: return text
 
 def get_syria_weather():
-    """جلب الطقس للمحافظات المحددة بتنسيق رشيق وأفقي"""
-    report = "🌤️ <b>حالة الطقس المتوقعة:</b>\n"
+    """جلب الحرارة فقط للمحافظات لضمان مظهر نظيف وبدون رموز مشوهة"""
+    report = "🌡️ <b>درجات الحرارة المتوقعة:</b>\n"
     cities = {
         "Damascus": "دمشق", 
         "Aleppo": "حلب", 
@@ -110,9 +110,11 @@ def get_syria_weather():
     try:
         weather_lines = []
         for eng, arb in cities.items():
-            url = f"https://wttr.in/{eng}?format=%c%t"
+            # قمنا بتغيير التنسيق إلى %t لجلب الحرارة فقط وتجنب الرموز الغريبة
+            url = f"https://wttr.in/{eng}?format=%t" 
             r = requests.get(url, timeout=5)
             if r.status_code == 200:
+                # تنظيف النص من أي مسافات أو إشارات زائدة
                 temp_info = r.text.strip().replace('+', '')
                 weather_lines.append(f"• {arb}: <code>{temp_info}</code>")
         
@@ -123,7 +125,8 @@ def get_syria_weather():
         else:
             report += "  ".join(weather_lines) + "\n\n"
         return report
-    except: return ""
+    except: 
+        return ""
 
 def get_gold_dollar_prices():
     try:
