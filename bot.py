@@ -12,22 +12,23 @@ import feedparser
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 
-# إعداد السجلات
+# إعداد السجلات (Logs)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# المتغيرات البيئية
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 CHANNEL_ID = "-1003803988944"
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
 DB_FILE = "sent_articles.txt"
 CACHE_FILE = "translation_cache.txt"
-TIMEOUT = 10
+TIMEOUT = 12
 
-# إنشاء session للاتصالات المتكررة (أسرع)
+# إنشاء session للاتصالات المتكررة (أداء أفضل)
 session = requests.Session()
 session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
 
-# الكلمات المفتاحية
+# الكلمات المفتاحية للفلترة (سوريا)
 KEYWORDS_SYRIA = [
     "سوريا", "Syria", "سوري", "Syrian", "السوريين", "الشرع", "الرئيس السوري",
     "دمشق", "Damascus", "حلب", "Aleppo", "حمص", "Homs", "حماة", "Hama",
@@ -38,24 +39,27 @@ KEYWORDS_SYRIA = [
 
 BREAKING_KEYWORDS = ["عاجل", "Breaking", "Urgent", "فوري", "Alert"]
 
-# مصادر الأخبار المحدثة والمنقحة (الأسرع والأكثر توافقاً مع البوتات)
+# مصادر الأخبار المختارة بعناية (الأكثر غزارة واستقراراً)
 RSS_FEEDS = [
-    "https://arabic.rt.com/rss/",  # روسيا اليوم (غزير جداً وسريع)
-    "https://www.skynewsarabia.com/rss/middle-east.xml",  # سكاي نيوز (الشرق الأوسط)
+    "https://arabic.rt.com/rss/",  # روسيا اليوم
+    "https://www.skynewsarabia.com/rss/middle-east.xml",  # سكاي نيوز
     "http://feeds.bbci.co.uk/arabic/rss.xml",  # BBC عربي
     "https://www.france24.com/ar/rss",  # فرانس 24 عربي
-    "https://www.enabbaladi.net/feed/",  # عنب بلدي (مصدر سوري هام جداً)
+    "https://arabic.euronews.com/rss?level=vertical&name=news",  # يورونيوز عربي
+    "https://www.dubaicanvas.ae/feed/", # دبي (أخبار عامة/منوعة)
+    "https://www.albayan.ae/rss-feeds-1.2587", # البيان الإماراتية (دبي)
+    "https://www.emaratalyoum.com/rss-feeds-1.2483", # الإمارات اليوم (دبي)
+    "https://www.alittihad.ae/rss", # الاتحاد (أبوظبي)
+    "https://www.enabbaladi.net/feed/",  # عنب بلدي
     "https://alwatan.sy/feed",  # جريدة الوطن السورية
-    "https://www.aljazeera.com/xml/rss/all.xml",
-    "https://sana.sy/?feed=rss2",  # سانا (المصدر الرسمي)
+    "https://sana.sy/?feed=rss2",  # سانا
     "https://www.syria.tv/feed",  # تلفزيون سوريا
     "https://syriasteps.com/feed/",  # سيريا ستيبس
     "https://alikhbariah.com/feed/",  # الإخبارية
     "https://aawsat.com/rss-feed",  # الشرق الأوسط
-    "https://www.alarabiya.net/.mrss/ar/middle-east.xml", # العربية
+    "https://www.alarabiya.net/.mrss/ar/middle-east.xml" # العربية
 ]
 
-# حكم يومية
 DAILY_WISDOM = [
     "الخوف من التعب تعب، والإقدام على التعب راحة.",
     "ليس المهم أن تسير سريعاً، المهم أن تسير في الطريق الصحيح.",
@@ -117,34 +121,26 @@ def save_sent_articles(links_list):
 
 def translate_text(text):
     try:
-        if not re.search(r'[a-zA-Z]', text):
-            return text
+        if not re.search(r'[a-zA-Z]', text): return text
         text_hash = hash_text(text)
-        if text_hash in translation_cache:
-            return translation_cache[text_hash]
-        translation = GoogleTranslator(source='en', target='ar').translate(text)
+        if text_hash in translation_cache: return translation_cache[text_hash]
+        translation = GoogleTranslator(source='auto', target='ar').translate(text)
         save_translation_to_cache(text, translation)
         return translation
     except: return text
+
 @lru_cache(maxsize=128)
 def get_source_name(url):
-    """استخراج اسم المصدر مع إيموجي مميز"""
     sources = {
-        "sana.sy": "🇸🇾 سانا", 
-        "syria.tv": "📺 تلفزيون سوريا", 
-        "enabbaladi": "🍇 عنب بلدي",
-        "alwatan.sy": "📰 جريدة الوطن",
-        "syriasteps": "🇸🇾 سيريا ستيبس",
-        "arabic.rt.com": "🇷🇺 روسيا اليوم",
-        "skynewsarabia": "🔵 سكاي نيوز", 
-        "bbci.co.uk": "🔴 BBC عربي", 
-        "france24.com/ar": "🇫🇷 فرانس 24", 
-        "aawsat": "🗞️ الشرق الأوسط",
-        "alarabiya": "🟩 العربية"
-        "aljazeera": "🟢 الجزيرة", "bbc": "🔴 BBC", 
+        "sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", "enabbaladi": "🍇 عنب بلدي",
+        "alwatan.sy": "📰 الوطن السورية", "syriasteps": "🇸🇾 سيريا ستيبس", "arabic.rt.com": "🇷🇺 روسيا اليوم",
+        "skynewsarabia": "🔵 سكاي نيوز", "bbci.co.uk": "🔴 BBC عربي", "france24.com": "🇫🇷 فرانس 24",
+         "aawsat": "🗞️ الشرق الأوسط", "alarabiya": "🟩 العربية",
+        "euronews": "🇪🇺 يورونيوز", "albayan": "🇦🇪 البيان (دبي)", "emaratalyoum": "🇦🇪 الإمارات اليوم",
+        "alittihad": "🇦🇪 الاتحاد (أبوظبي)"
     }
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة أنباء")
-    
+
 def fetch_feed(feed_url, sent_list):
     breaking, normal = [], []
     try:
@@ -177,16 +173,16 @@ def fetch_feed(feed_url, sent_list):
 
 def get_rss_news_parallel(sent_list):
     breaking_all, normal_all = [], []
-    with ThreadPoolExecutor(max_workers=6) as executor:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         futures = {executor.submit(fetch_feed, url, sent_list): url for url in RSS_FEEDS}
         for future in as_completed(futures):
             try:
                 breaking, normal = future.result()
                 breaking_all.extend(breaking)
                 normal_all.extend(normal)
-                if len(normal_all) >= 12: break
+                if len(normal_all) >= 15: break # رفعنا سقف الأخبار قليلاً
             except: pass
-    return breaking_all, normal_all[:12]
+    return breaking_all, normal_all[:15]
 
 def get_syria_weather():
     report = "🌡️ <b>درجات الحرارة المتوقعة:</b>\n"
@@ -209,7 +205,6 @@ def get_syria_weather():
             city_eng, result = future.result()
             if result: weather_results[city_eng] = result
 
-    # ترتيب النتائج للحفاظ على نفس النسق دائماً
     ordered_lines = [weather_results[c] for c in cities.keys() if c in weather_results]
     
     if ordered_lines:
@@ -243,19 +238,25 @@ def send_telegram(chat_id, message, is_breaking=False):
     except: return False
 
 def main():
-    if not BOT_TOKEN or not CHAT_ID: return
+    if not BOT_TOKEN or not CHAT_ID:
+        logging.error("البيانات الأساسية ناقصة!")
+        return
     
     load_translation_cache()
     sent_list = load_sent_articles()
+    
+    logging.info("بدء جلب الأخبار...")
     breaking_news, normal_news = get_rss_news_parallel(sent_list)
     links_to_save = []
 
+    # 1. الأخبار العاجلة
     for b in breaking_news:
         msg = f"🚨 <b>خبر عاجل</b>\n\n📰 <b>{b['title']}</b>\n\n{b['source']} | <a href='{b['link']}'>🔗 التفاصيل</a>"
         for cid in TARGET_CHATS: 
             if send_telegram(cid, msg, is_breaking=True):
                 if b['link'] not in links_to_save: links_to_save.append(b['link'])
     
+    # 2. النشرة الدورية
     if normal_news:
         hijri = get_hijri_date()
         wisdom = random.choice(DAILY_WISDOM)
@@ -290,6 +291,7 @@ def main():
                 if art['link'] not in links_to_save: links_to_save.append(art['link'])
 
     save_sent_articles(links_to_save)
+    logging.info("تم إنهاء النشرة بنجاح.")
 
 if __name__ == "__main__":
     main()
