@@ -53,6 +53,7 @@ RSS_FEEDS = [
     "https://www.albayan.ae/rss-feeds-1.2587",
     "https://www.emaratalyoum.com/rss-feeds-1.2483",
     "https://www.alittihad.ae/rss",
+    "https://www.almayadeen.net/rss",
     "https://www.enabbaladi.net/feed/",
     "https://alwatan.sy/feed",
     "https://sana.sy/?feed=rss2",
@@ -134,7 +135,7 @@ def get_source_name(url):
         "reuters.com": "🇬🇧 رويترز", "sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", 
         "enabbaladi": "🍇 عنب بلدي", "alwatan.sy": "📰 الوطن", "syriasteps": "🇸🇾 سيريا ستيبس", 
         "arabic.rt.com": "🇷🇺 روسيا اليوم", "skynewsarabia": "🔵 سكاي نيوز", "bbci.co.uk": "🔴 BBC", 
-        "france24.com": "🇫🇷 فرانس 24", "aawsat": "🗞️ الشرق الأوسط", 
+        "france24.com": "🇫🇷 فرانس 24", "almayadeen": "🟠 الميادين", "aawsat": "🗞️ الشرق الأوسط", 
         "alarabiya": "🟩 العربية", "euronews": "🇪🇺 يورونيوز", "albayan": "🇦🇪 البيان", 
         "emaratalyoum": "🇦🇪 الإمارات اليوم", "alittihad": "🇦🇪 الاتحاد"
     }
