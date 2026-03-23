@@ -137,7 +137,7 @@ def get_source_name(url):
         "arabic.rt.com": "🇷🇺 روسيا اليوم", "skynewsarabia": "🔵 سكاي نيوز", "bbci.co.uk": "🔴 BBC", 
         "france24.com": "🇫🇷 فرانس 24", "almayadeen": "🟠 الميادين", "aawsat": "🗞️ الشرق الأوسط", 
         "alarabiya": "🟩 العربية", "euronews": "🇪🇺 يورونيوز", "albayan": "🇦🇪 البيان", 
-        "emaratalyoum": "🇦🇪 الإمارات اليوم", "alittihad": "🇦🇪 الاتحاد"
+        "emaratalyoum": "🇦🇪 الإمارات اليوم", "alittihad": "🇦🇪 الاتحاد","alikhbariah": "🇸🇾 الأخبارية السورية"
     }
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة أنباء")
 
@@ -212,7 +212,7 @@ def get_syria_weather():
 
 def get_gold_dollar_prices():
     """ استخراج الأسعار من موقع 'الليرة اليوم' بدقة """
-    gold, dollar = "1,435,000", "12,000" # قيم افتراضية
+    gold, dollar = "1,528,000", "12,000" # قيم افتراضية
     try:
         r = session.get("https://sp-today.com/city/damascus", timeout=12)
         soup = BeautifulSoup(r.text, 'html.parser')
