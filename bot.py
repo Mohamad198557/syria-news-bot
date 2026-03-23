@@ -5,27 +5,18 @@ import logging
 import re
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import lru_cache
-import hashlib
 import requests
 import feedparser
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 
-# إعداد السجلات
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# المتغيرات البيئية
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 CHANNEL_ID = "-1003803988944"
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
 DB_FILE = "sent_articles.txt"
-CACHE_FILE = "translation_cache.txt"
-TIMEOUT = 11
-
-session = requests.Session()
-session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
 
 KEYWORDS_SYRIA = [
     "سوريا", "Syria", "سوري", "Syrian", "السوريين", "الشرع", "الرئيس السوري",
@@ -35,33 +26,42 @@ KEYWORDS_SYRIA = [
     "درعا", "Daraa", "القنيطرة", "Quneitra", "ريف دمشق"
 ]
 
-BREAKING_KEYWORDS = [
-    "عاجل", "Breaking", "Urgent", "فوري", "Alert",
-    "انفجار", "اغتيال", "مقتل", "هجوم", "قصف", "غارة", 
-    "اشتباكات", "مرسوم", "إقالة", "زلزال", "هزة أرضية",
-    "سقوط", "استهداف", "طيران", "مسيرة", "مفخخة"
-]
+BREAKING_KEYWORDS = ["عاجل", "Breaking", "Urgent", "فوري", "Alert"]
 
 RSS_FEEDS = [
-    "https://news.google.com/rss/search?q=site:reuters.com+languagedirectory:ar&hl=ar&gl=AE&ceid=AE:ar",
+    "https://www.aljazeera.com/xml/rss/all.xml",
+    "https://www.alarabiya.net/.mrss/ar.xml",
     "https://arabic.rt.com/rss/",
-    "https://www.skynewsarabia.com/rss/middle-east.xml",
-    "http://feeds.bbci.co.uk/arabic/rss.xml",
     "https://www.france24.com/ar/rss",
-    "https://arabic.euronews.com/rss?level=vertical&name=news",
-    "https://www.dubaicanvas.ae/feed/",
-    "https://www.albayan.ae/rss-feeds-1.2587",
-    "https://www.emaratalyoum.com/rss-feeds-1.2483",
-    "https://www.alittihad.ae/rss",
-    "https://www.almayadeen.net/rss",
-    "https://www.enabbaladi.net/feed/",
-    "https://alwatan.sy/feed",
-    "https://sana.sy/?feed=rss2",
+    "https://www.aa.com.tr/ar/rss/default.aspx",
+    "https://www.skynewsarabia.com/rss/latest.xml",
+    "https://www.addustour.com/RSS.aspx",
+    "https://www.independentarabia.com/ar/rss.xml",
     "https://www.syria.tv/feed",
     "https://syriasteps.com/feed/",
     "https://alikhbariah.com/feed/",
+    "https://sana.sy/?feed=rss2",
+    "https://www.enabbaladi.net/archives/category/news/feed",
+    "https://all4syria.info/feed",
+    "https://www.zamanalwsl.net/rss.xml",
+    "https://arabic.reuters.com/rss",
+    "http://www.bbc.co.uk/arabic/rss.xml",
+    "http://feeds.bbci.co.uk/news/world/rss.xml",
+    "https://apnews.com/rss",
+    "http://rss.cnn.com/rss/edition_world.rss",
+    "https://feeds.washingtonpost.com/rss/world",
+    "https://www.nytimes.com/svc/collections/v1/publish/www.nytimes.com/section/world/rss.xml",
     "https://aawsat.com/rss-feed",
-    "https://www.alarabiya.net/.mrss/ar/middle-east.xml"
+    "https://www.dw.com/ar/rss-eco",
+    "https://www.guardian.co.uk/world/rss",
+    "https://www.euronews.com/rss.xml",
+    "https://ina.iq/rss/",
+    "https://trt.global/arabi/rss/",
+    "https://www.spa.gov.sa/rss",
+    "https://www.wam.ae/ar/rss",
+    "https://www.qna.org.qa/rss",
+    "https://www.kuna.net.kw/rss/",
+    "https://www.skynewsarabia.com/rss/world.xml"
 ]
 
 DAILY_WISDOM = [
@@ -70,210 +70,196 @@ DAILY_WISDOM = [
     "الكلمة الطيبة ليست سهماً، لكنها تخترق القلب.",
     "النجاح ليس عدم فعل الأخطاء، النجاح هو عدم تكرار نفس الخطأ مرتين.",
     "لا تنتظر الفرصة، بل اصنعها بنفسك.",
+    "من أراد النجاح في هذا العالم عليه أن يتغلب على أسس الفقر الثلاثة: النوم، والتراخي، والخوف.",
     "العقل كالمظلة، لا يعمل إلا إذا كان مفتوحاً."
 ]
 
-translation_cache = {}
-
-def hash_text(text): return hashlib.md5(text.encode()).hexdigest()
-
-def load_translation_cache():
-    global translation_cache
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "r", encoding='utf-8') as f:
-                for line in f:
-                    if "|" in line:
-                        key, value = line.strip().split("|", 1)
-                        translation_cache[key] = value
-        except: pass
-
-def save_translation_to_cache(text, translation):
-    key = hash_text(text)
-    translation_cache[key] = translation
-    try:
-        with open(CACHE_FILE, "a", encoding='utf-8') as f:
-            f.write(f"{key}|{translation}\n")
-    except: pass
-
 def get_hijri_date():
     try:
-        r = session.get("http://api.aladhan.com/v1/gToH", params={"date": datetime.now().strftime("%d-%m-%Y")}, timeout=5)
+        r = requests.get("http://api.aladhan.com/v1/gToH", params={"date": datetime.now().strftime("%d-%m-%Y")}, timeout=5)
         if r.status_code == 200:
             data = r.json()['data']['hijri']
             return f"{data['day']} {data['month']['ar']} {data['year']} هـ"
-    except: pass
+    except:
+        pass
     return ""
 
 def load_sent_articles():
     if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r", encoding='utf-8') as f: return set(f.read().splitlines())
-        except: pass
+        with open(DB_FILE, "r", encoding='utf-8') as f:
+            return set(f.read().splitlines())
     return set()
 
 def save_sent_articles(links_list):
-    if not links_list: return
+    if not links_list:
+        return
     try:
         with open(DB_FILE, "a", encoding='utf-8') as f:
-            for link in links_list: f.write(link + "\n")
-    except: pass
+            for link in links_list:
+                f.write(link + "\n")
+    except Exception as e:
+        logging.error(f"Error saving to DB: {e}")
 
 def translate_text(text):
     try:
-        if not re.search(r'[a-zA-Z]', text): return text
-        text_hash = hash_text(text)
-        if text_hash in translation_cache: return translation_cache[text_hash]
-        translation = GoogleTranslator(source='auto', target='ar').translate(text)
-        save_translation_to_cache(text, translation)
-        return translation
-    except: return text
+        if re.search(r'[a-zA-Z]', text
+    except:
+        return text
 
-@lru_cache(maxsize=128)
+def get_syria_weather():
+    report = "🌡️ <b>درجات الحرارة المتوقعة:</b>\n"
+    cities = {
+        "Damascus": "دمشق",
+        "Aleppo": "حلب",
+        "Homs": "حمص",
+        "Latakia": "اللاذقية",
+        "Daraa": "درعا",
+        "Deir ez-Zor": "دير الزور"
+    }
+    try:
+        weather_lines = []
+        for eng, arb in cities.items():
+            url = f"https://wttr.in/{eng}?format=%t"
+            r = requests.get(url, timeout=5)
+            if r.status_code == 200:
+                temp_info = r.text.strip().replace('+', '')
+                weather_lines.append(f"• {arb}: <code>{temp_info}</code>")
+        if len(weather_lines) >= 6:
+            report += "  ".join(weather_lines[:3]) + "\n"
+            report += "  ".join(weather_lines[3:]) + "\n\n"
+        else:
+            report += "  ".join(weather_lines) + "\n\n"
+        return report
+    except:
+        return ""
+
+def get_gold_dollar_prices():
+    try:
+        r = requests.get("https://sp-today.com/en", headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        text = soup.get_text()
+        gold = re.findall(r'1[,\\d]{6,9}', text)
+        dollar = re.findall(r'1[1-2],\\d{3}', text)
+        return (gold[0] if gold else "1,517,000"), (dollar[0] if dollar else "11,950")
+    except:
+        return "1,517,000", "11,950"
+
 def get_source_name(url):
     sources = {
-        "reuters.com": "🇬🇧 رويترز", "sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", 
-        "enabbaladi": "🍇 عنب بلدي", "alwatan.sy": "📰 الوطن", "syriasteps": "🇸🇾 سيريا ستيبس", 
-        "arabic.rt.com": "🇷🇺 روسيا اليوم", "skynewsarabia": "🔵 سكاي نيوز", "bbci.co.uk": "🔴 BBC", 
-        "france24.com": "🇫🇷 فرانس 24", "alikhbariah.com": "🇸🇾 الأخبارية السورية", "aawsat": "🗞️ الشرق الأوسط", 
-        "alarabiya": "🟩 العربية", "euronews": "🇪🇺 يورونيوز", "albayan": "🇦🇪 البيان", 
-        "emaratalyoum": "🇦🇪 الإمارات اليوم", "alittihad": "🇦🇪 الاتحاد"
+        "sana.sy": "🇸🇾 سانا",
+        "syria.tv": "📺 تلفزيون سوريا",
+        "aljazeera": "🟢 الجزيرة",
+        "bbc": "🔴 BBC",
+        "guardian": "🟠 الغارديان",
+        "nytimes": "🇺🇸 نيويورك تايمز",
+        "aa.com.tr": "🇹🇷 الأناضول",
+        "skynewsarabia": "🔵 سكاي عربية",
+        "france24": "🇫🇷 فرانس 24",
+        "rt": "🇷🇺 روسيا اليوم",
+        "dw.com": "🇩🇪 DW",
+        "trt.global": "🇹🇷 TRT"
     }
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة أنباء")
 
-def get_image_url(entry):
-    try:
-        if 'media_content' in entry and len(entry.media_content) > 0:
-            return entry.media_content[0].get('url')
-        if 'links' in entry:
-            for link in entry.links:
-                if 'image' in link.get('type', ''): return link.get('href')
-        if 'summary' in entry:
-            soup = BeautifulSoup(entry.summary, 'html.parser')
-            img = soup.find('img')
-            if img: return img.get('src')
-    except: pass
-    return None
-
-def fetch_feed(feed_url, sent_list):
+def fetch_feed(url, sent_list):
     breaking, normal = [], []
     try:
-        response = session.get(feed_url, timeout=TIMEOUT)
-        feed = feedparser.parse(response.content)
-        source = get_source_name(feed_url)
+        feed = feedparser.parse(requests.get(url, timeout=10).content)
+        source = get_source_name(url)
         for entry in feed.entries[:8]:
-            try:
-                link = getattr(entry, 'link', '')
-                if not link or link in sent_list: continue
-                title_ar = translate_text(getattr(entry, 'title', ''))
-                summary = getattr(entry, 'summary', '')[:100]
-                full_txt = f"{title_ar} {summary}".lower()
-                if any(k.lower() in full_txt for k in KEYWORDS_SYRIA):
-                    img_url = get_image_url(entry)
-                    data = {'title': title_ar[:125].strip(), 'link': link, 'source': source, 'image': img_url}
-                    if any(bk.lower() in full_txt for bk in BREAKING_KEYWORDS): breaking.append(data)
-                    else: normal.append(data)
-            except: continue
-    except: pass
+            link = getattr(entry, 'link', '')
+            if link in sent_list: continue
+            title_or = getattr(entry, 'title', '')
+            title_ar = translate_text(title_or)
+            full_txt = f"{title_or} {title_ar} {getattr(entry, 'summary', '')}"
+            if any(k.lower() in full_txt.lower() for k in KEYWORDS_SYRIA):
+                data = {'title': title_ar[:125].strip(), 'link': link, 'source': source}
+                if any(bk.lower() in full_txt.lower() for bk in BREAKING_KEYWORDS):
+                    breaking.append(data)
+                else:
+                    normal.append(data)
+            if len(normal) >= 12: break
+    except Exception as e:
+        logging.warning(f"Error fetching from {url}: {e}")
     return breaking, normal
 
-def get_rss_news_parallel(sent_list):
+def get_rss_news(sent_list):
     breaking_all, normal_all = [], []
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = {executor.submit(fetch_feed, url, sent_list): url for url in RSS_FEEDS}
         for future in as_completed(futures):
-            try:
-                b, n = future.result()
-                breaking_all.extend(b)
-                normal_all.extend(n)
-            except: pass
-    return breaking_all, normal_all[:15]
-
-def get_syria_weather():
-    report = "🌡️ <b>درجات الحرارة المتوقعة:</b>\n"
-    cities = {"Damascus": "دمشق", "Aleppo": "حلب", "Homs": "حمص", "Latakia": "اللاذقية", "Daraa": "درعا", "Deir ez-Zor": "دير الزور"}
-    weather_results = {}
-    def fetch_weather(c_eng):
-        try:
-            r = session.get(f"https://wttr.in/{c_eng}?format=%t", timeout=5)
-            if r.status_code == 200: return c_eng, f"• {cities[c_eng]}: <code>{r.text.strip().replace('+', '')}</code>"
-        except: pass
-        return c_eng, None
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = [executor.submit(fetch_weather, c) for c in cities.keys()]
-        for f in as_completed(futures):
-            ce, res = f.result()
-            if res: weather_results[ce] = res
-    ordered = [weather_results[c] for c in cities.keys() if c in weather_results]
-    if ordered:
-        report += "  ".join(ordered[:3]) + "\n" + "  ".join(ordered[3:]) + "\n\n"
-        return report
-    return ""
-
-def get_gold_dollar_prices():
-    """ استخراج الأسعار من موقع 'الليرة اليوم' بدقة """
-    gold, dollar = "1,535,000", "12,050" # قيم افتراضية
-    try:
-        r = session.get("https://sp-today.com/city/damascus", timeout=12)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        
-        # جلب سعر الدولار (نبحث عن السطر الذي يحتوي USD)
-        usd_row = soup.find('tr', id='table_row_usd') or soup.find('td', string=re.compile('USD'))
-        if usd_row:
-            prices = usd_row.find_parent('tr').find_all('td')
-            if len(prices) >= 3:
-                dollar = prices[2].get_text(strip=True) # مبيع الدولار يكون عادة في العمود الثالث
-
-        # جلب سعر الذهب عيار 21
-        gold_section = soup.find(string=re.compile("الذهب عيار 21"))
-        if gold_section:
-            # نبحث عن أول رقم كبير (6 خانات فما فوق) في النص المجاور
-            p_text = gold_section.find_parent().get_text()
-            match = re.search(r'(\d{1,3}(,\d{3})+)', p_text)
-            if match: gold = match.group(1)
-            
-        return re.sub(r'[^\d,]', '', gold), re.sub(r'[^\d,]', '', dollar)
-    except: return gold, dollar
+            breaking, normal = future.result()
+            breaking_all.extend(breaking)
+            normal_all.extend(normal)
+            if len(normal_all) >= 12:
+                break
+    return breaking_all, normal_all[:12]
 
 def send_telegram(chat_id, message, is_breaking=False):
+    if not chat_id:
+        return False
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True, "disable_notification": not is_breaking}
-    try: return session.post(url, json=payload, timeout=15).status_code == 200
-    except: return False
-
-def send_telegram_photo(chat_id, message, image_url, is_breaking=True):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-    payload = {"chat_id": chat_id, "photo": image_url, "caption": message[:1024], "parse_mode": "HTML", "disable_notification": not is_breaking}
-    try: return session.post(url, json=payload, timeout=20).status_code == 200
-    except: return False
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+        "disable_notification": not is_breaking
+    }
+    try:
+        r = requests.post(url, json=payload, timeout=15)
+        return r.status_code == 200
+    except:
+        return False
 
 def main():
-    if not BOT_TOKEN or not CHAT_ID: return
-    load_translation_cache()
+    if not BOT_TOKEN or not CHAT_ID:
+        logging.error("BOT_TOKEN or CHAT_ID is missing!")
+        return
     sent_list = load_sent_articles()
-    breaking_news, normal_news = get_rss_news_parallel(sent_list)
+    breaking_news, normal_news = get_rss_news(sent_list)
     links_to_save = []
 
+    # الأخبار العاجلة (كل خبر برسالة منفصلة)
     for b in breaking_news:
         msg = f"🚨 <b>خبر عاجل</b>\n\n📰 <b>{b['title']}</b>\n\n{b['source']} | <a href='{b['link']}'>🔗 التفاصيل</a>"
         for cid in TARGET_CHATS:
-            success = send_telegram_photo(cid, msg, b['image']) if b.get('image') else False
-            if not success: success = send_telegram(cid, msg, is_breaking=True)
-            if success and b['link'] not in links_to_save: links_to_save.append(b['link'])
-    
+            if send_telegram(cid, msg, is_breaking=True):
+                if b['link'] not in links_to_save:
+                    links_to_save.append(b['link'])
+
+    # النشرة الشاملة
     if normal_news:
-        hijri, weather_p, (gold_p, dollar_p) = get_hijri_date(), get_syria_weather(), get_gold_dollar_prices()
-        damascus_time = datetime.utcnow() + timedelta(hours=3)
-        msg = f"<b>🇸🇾 موجز الشارع السوري</b>\n📅 {damascus_time.strftime('%Y/%m/%d')} | {hijri}\n✨ <i>\"{random.choice(DAILY_WISDOM)}\"</i>\n───━━━━─━━━━───\n\n"
-        if weather_p: msg += weather_p
-        msg += f"<b>💰 أسعار الصرف والذهب (دمشق):</b>\n💵 الدولار: <code>{dollar_p}</code> ل.س\n🪙 الذهب ع21: <code>{gold_p}</code> ل.س\n\n<b>📰 أهم الأنباء:</b>\n"
+        hijri = get_hijri_date()
+        wisdom = random.choice(DAILY_WISDOM)
+        weather_p = get_syria_weather()
+        gold_p, dollar_p = get_gold_dollar_prices()
+        damascus_time = (datetime.utcnow() + timedelta(hours=3))
+
+        msg = f"<b>🇸🇾 موجز الشارع السوري</b>\n"
+        msg += f"📅 {damascus_time.strftime('%Y/%m/%d')} | {hijri}\n"
+        msg += f"✨ <i>\"{wisdom}\"</i>\n"
+        msg += "───━━━━─━━━━───\n\n"
+        msg += weather_p
+        msg += f"<b>💰 أسعار الصرف والذهب (دمشق):</b>\n"
+        msg += f"💵 الدولار: <code>{dollar_p}</code> ل.س\n"
+        msg += f"🪙 الذهب ع21: <code>{gold_p}</code> ل.س += "<b>📰 أهم الأنباء المحلية والدولية:</b>\n"
         for i, art in enumerate(normal_news, 1):
             msg += f"{i}️⃣ <b>{art['title']}</b>\n└ {art['source']} | <a href='{art['link']}'>🔗 التفاصيل</a>\n\n"
-        msg += "───━━━━─━━━━───\n<b>تطوير : محمد محمد جلال الخطيب - طلاب كليات الإعلام ||FMD</b>"
+        msg += "───━━━━─━━━━───\n"
+        msg += "<b>تم التطوير بواسطة: محمد محمد جلال الخطيب\nطلاب كليات الاعلام ||FMD</b>"
+
+        success = False
         for cid in TARGET_CHATS:
-            if send_telegram(cid, msg) and not links_to_save:
-                for art in normal_news: links_to_save.append(art['link'])
+            if send_telegram(cid, msg, is_breaking=False):
+                success = True
+
+        if success:
+            for art in normal_news:
+                if art['link'] not in links_to_save:
+                    links_to_save.append(art['link'])
 
     save_sent_articles(links_to_save)
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    main()
