@@ -27,253 +27,123 @@ TIMEOUT = 15
 session = requests.Session()
 session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
 
-KEYWORDS_SYRIA = [
-    "سوريا", "Syria", "سوري", "Syrian", "السوريين", "الشرع", "الرئيس السوري",
-    "دمشق", "Damascus", "حلب", "Aleppo", "حمص", "Homs", "حماة", "Hama",
-    "اللاذقية", "Latakia", "طرطوس", "Tartus", "إدلب", "Idlib", "الرقة", "Raqqa",
-    "دير الزور", "Deir ez-Zor", "الحسكة", "Hasakah", "السويداء", "Suwayda", 
-    "درعا", "Daraa", "القنيطرة", "Quneitra", "ريف دمشق"
-]
+# الكلمات المفتاحية والساخنة (كما هي)
+KEYWORDS_SYRIA = ["سوريا", "Syria", "سوري", "دمشق", "حلب", "حمص", "حماة", "اللاذقية", "طرطوس", "إدلب", "الرقة", "دير الزور", "الحسكة", "السويداء", "درعا", "القنيطرة", "ريف دمشق"]
+BREAKING_KEYWORDS = ["عاجل", "Breaking", "انفجار", "اغتيال", "مقتل", "هجوم", "قصف", "غارة", "اشتباكات", "مرسوم", "إقالة", "زلزال", "سقوط", "استهداف", "طيران", "مسيرة", "مفخخة"]
 
-BREAKING_KEYWORDS = [
-    "عاجل", "Breaking", "Urgent", "فوري", "Alert",
-    "انفجار", "اغتيال", "مقتل", "هجوم", "قصف", "غارة", 
-    "اشتباكات", "مرسوم", "إقالة", "زلزال", "هزة أرضية",
-    "سقوط", "استهداف", "طيران", "مسيرة", "مفخخة"
-]
-
+# المصادر الـ 19 الأساسية
 RSS_FEEDS = [
     "https://news.google.com/rss/search?q=site:reuters.com+languagedirectory:ar&hl=ar&gl=AE&ceid=AE:ar",
-    "https://arabic.rt.com/rss/",
-    "https://www.skynewsarabia.com/rss/middle-east.xml",
-    "http://feeds.bbci.co.uk/arabic/rss.xml",
-    "https://www.france24.com/ar/rss",
-    "https://arabic.euronews.com/rss?level=vertical&name=news",
-    "https://www.dubaicanvas.ae/feed/",
-    "https://www.albayan.ae/rss-feeds-1.2587",
-    "https://www.emaratalyoum.com/rss-feeds-1.2483",
-    "https://www.alittihad.ae/rss",
-    "https://www.almayadeen.net/rss",
-    "https://www.enabbaladi.net/feed/",
-    "https://alwatan.sy/feed",
-    "https://sana.sy/?feed=rss2",
-    "https://www.syria.tv/feed",
-    "https://syriasteps.com/feed/",
-    "https://alikhbariah.com/feed/",
-    "https://aawsat.com/rss-feed",
-    "https://www.alarabiya.net/.mrss/ar/middle-east.xml"
+    "https://arabic.rt.com/rss/", "https://www.skynewsarabia.com/rss/middle-east.xml",
+    "http://feeds.bbci.co.uk/arabic/rss.xml", "https://www.france24.com/ar/rss",
+    "https://arabic.euronews.com/rss?level=vertical&name=news", "https://www.dubaicanvas.ae/feed/",
+    "https://www.albayan.ae/rss-feeds-1.2587", "https://www.emaratalyoum.com/rss-feeds-1.2483",
+    "https://www.alittihad.ae/rss", "https://www.almayadeen.net/rss",
+    "https://www.enabbaladi.net/feed/", "https://alwatan.sy/feed",
+    "https://sana.sy/?feed=rss2", "https://www.syria.tv/feed",
+    "https://syriasteps.com/feed/", "https://alikhbariah.com/feed/",
+    "https://aawsat.com/rss-feed", "https://www.alarabiya.net/.mrss/ar/middle-east.xml"
 ]
 
-DAILY_WISDOM = [
-    "الخوف من التعب تعب، والإقدام على التعب راحة.",
-    "ليس المهم أن تسير سريعاً، المهم أن تسير في الطريق الصحيح.",
-    "الكلمة الطيبة ليست سهماً، لكنها تخترق القلب.",
-    "النجاح ليس عدم فعل الأخطاء، النجاح هو عدم تكرار نفس الخطأ مرتين.",
-    "لا تنتظر الفرصة، بل اصنعها بنفسك.",
-    "العقل كالمظلة، لا يعمل إلا إذا كان مفتوحاً."
-]
-
-translation_cache = {}
-
-def hash_text(text): return hashlib.md5(text.encode()).hexdigest()
-
-def load_translation_cache():
-    global translation_cache
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE, "r", encoding='utf-8') as f:
-                for line in f:
-                    if "|" in line:
-                        key, value = line.strip().split("|", 1)
-                        translation_cache[key] = value
-        except: pass
-
-def save_translation_to_cache(text, translation):
-    key = hash_text(text)
-    translation_cache[key] = translation
+# --- دالة قشط قناة تليجرام (جديد) ---
+def fetch_telegram_channel(channel_username, sent_list):
+    """جلب الأخبار من نسخة الويب لقناة تليجرام"""
+    tg_news = []
     try:
-        with open(CACHE_FILE, "a", encoding='utf-8') as f:
-            f.write(f"{key}|{translation}\n")
-    except: pass
+        url = f"https://t.me/s/{channel_username}"
+        r = session.get(url, timeout=TIMEOUT)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        # تليجرام يضع الرسائل في div كلاس 'tgme_widget_message_wrap'
+        messages = soup.find_all('div', class_='tgme_widget_message_wrap')
+        
+        for msg in messages[::-1][:5]: # نأخذ آخر 5 رسائل
+            text_div = msg.find('div', class_='tgme_widget_message_text')
+            if not text_div: continue
+            
+            content = text_div.get_text(strip=True)
+            link_tag = msg.find('a', class_='tgme_widget_message_date')
+            msg_link = link_tag['href'] if link_tag else f"https://t.me/{channel_username}"
+            
+            if msg_link in sent_list: continue
+            
+            # فلترة وتحقق
+            if any(k.lower() in content.lower() for k in KEYWORDS_SYRIA):
+                # استخراج صورة إن وجدت
+                img_div = msg.find('a', class_='tgme_widget_message_photo_wrap')
+                img_url = None
+                if img_div:
+                    style = img_div.get('style', '')
+                    match = re.search(r"url\(['\"]?(.*?)['\"]?\)", style)
+                    if match: img_url = match.group(1)
+                
+                tg_news.append({
+                    'title': content[:150] + "...",
+                    'link': msg_link,
+                    'source': "📺 الإخبارية (TG)",
+                    'image': img_url,
+                    'is_breaking': any(bk in content for bk in BREAKING_KEYWORDS)
+                })
+    except Exception as e:
+        logging.error(f"Telegram Scraping Error: {e}")
+    return tg_news
 
-def get_hijri_date():
-    try:
-        r = session.get("http://api.aladhan.com/v1/gToH", params={"date": datetime.now().strftime("%d-%m-%Y")}, timeout=5)
-        if r.status_code == 200:
-            data = r.json()['data']['hijri']
-            return f"{data['day']} {data['month']['ar']} {data['year']} هـ"
-    except: pass
-    return ""
-
-def load_sent_articles():
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r", encoding='utf-8') as f: return set(f.read().splitlines())
-        except: pass
-    return set()
-
-def save_sent_articles(links_list):
-    if not links_list: return
-    try:
-        with open(DB_FILE, "a", encoding='utf-8') as f:
-            for link in links_list: f.write(link + "\n")
-    except: pass
-
-def translate_text(text):
-    try:
-        if not re.search(r'[a-zA-Z]', text): return text
-        text_hash = hash_text(text)
-        if text_hash in translation_cache: return translation_cache[text_hash]
-        translation = GoogleTranslator(source='auto', target='ar').translate(text)
-        save_translation_to_cache(text, translation)
-        return translation
-    except: return text
-
-@lru_cache(maxsize=128)
-def get_source_name(url):
-    sources = {
-        "reuters.com": "🇬🇧 رويترز", "sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", 
-        "enabbaladi": "🍇 عنب بلدي", "alwatan.sy": "📰 الوطن", "syriasteps": "🇸🇾 سيريا ستيبس", 
-        "arabic.rt.com": "🇷🇺 روسيا اليوم", "skynewsarabia": "🔵 سكاي نيوز", "bbci.co.uk": "🔴 BBC", 
-        "france24.com": "🇫🇷 فرانس 24", "almayadeen": "🟠 الميادين", "aawsat": "🗞️ الشرق الأوسط", 
-        "alarabiya": "🟩 العربية", "euronews": "🇪🇺 يورونيوز", "albayan": "🇦🇪 البيان", 
-        "emaratalyoum": "🇦🇪 الإمارات اليوم", "alittihad": "🇦🇪 الاتحاد","alikhbariah": "🇸🇾 الأخبارية السورية"
-    }
-    return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة أنباء")
-
-def get_image_url(entry):
-    try:
-        if 'media_content' in entry and len(entry.media_content) > 0:
-            return entry.media_content[0].get('url')
-        if 'links' in entry:
-            for link in entry.links:
-                if 'image' in link.get('type', ''): return link.get('href')
-        if 'summary' in entry:
-            soup = BeautifulSoup(entry.summary, 'html.parser')
-            img = soup.find('img')
-            if img: return img.get('src')
-    except: pass
-    return None
-
-def fetch_feed(feed_url, sent_list):
-    breaking, normal = [], []
-    try:
-        response = session.get(feed_url, timeout=TIMEOUT)
-        feed = feedparser.parse(response.content)
-        source = get_source_name(feed_url)
-        for entry in feed.entries[:8]:
-            try:
-                link = getattr(entry, 'link', '')
-                if not link or link in sent_list: continue
-                title_ar = translate_text(getattr(entry, 'title', ''))
-                summary = getattr(entry, 'summary', '')[:100]
-                full_txt = f"{title_ar} {summary}".lower()
-                if any(k.lower() in full_txt for k in KEYWORDS_SYRIA):
-                    img_url = get_image_url(entry)
-                    data = {'title': title_ar[:125].strip(), 'link': link, 'source': source, 'image': img_url}
-                    if any(bk.lower() in full_txt for bk in BREAKING_KEYWORDS): breaking.append(data)
-                    else: normal.append(data)
-            except: continue
-    except: pass
-    return breaking, normal
-
-def get_rss_news_parallel(sent_list):
-    breaking_all, normal_all = [], []
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = {executor.submit(fetch_feed, url, sent_list): url for url in RSS_FEEDS}
-        for future in as_completed(futures):
-            try:
-                b, n = future.result()
-                breaking_all.extend(b)
-                normal_all.extend(n)
-            except: pass
-    return breaking_all, normal_all[:15]
-
-def get_syria_weather():
-    report = "🌡️ <b>درجات الحرارة المتوقعة:</b>\n"
-    cities = {"Damascus": "دمشق", "Aleppo": "حلب", "Homs": "حمص", "Latakia": "اللاذقية", "Daraa": "درعا", "Deir ez-Zor": "دير الزور"}
-    weather_results = {}
-    def fetch_weather(c_eng):
-        try:
-            r = session.get(f"https://wttr.in/{c_eng}?format=%t", timeout=5)
-            if r.status_code == 200: return c_eng, f"• {cities[c_eng]}: <code>{r.text.strip().replace('+', '')}</code>"
-        except: pass
-        return c_eng, None
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = [executor.submit(fetch_weather, c) for c in cities.keys()]
-        for f in as_completed(futures):
-            ce, res = f.result()
-            if res: weather_results[ce] = res
-    ordered = [weather_results[c] for c in cities.keys() if c in weather_results]
-    if ordered:
-        report += "  ".join(ordered[:3]) + "\n" + "  ".join(ordered[3:]) + "\n\n"
-        return report
-    return ""
+# --- بقية الدوال المساعدة (نفس الوظائف السابقة مع تحسين الأسعار) ---
 
 def get_gold_dollar_prices():
-    """ استخراج الأسعار من موقع 'الليرة اليوم' بدقة """
-    gold, dollar = "1,528,000", "12,000" # قيم افتراضية
+    gold, dollar = "1,515,000", "14,850"
     try:
         r = session.get("https://sp-today.com/city/damascus", timeout=12)
         soup = BeautifulSoup(r.text, 'html.parser')
-        
-        # جلب سعر الدولار (نبحث عن السطر الذي يحتوي USD)
-        usd_row = soup.find('tr', id='table_row_usd') or soup.find('td', string=re.compile('USD'))
+        usd_row = soup.find('tr', id='table_row_usd')
         if usd_row:
-            prices = usd_row.find_parent('tr').find_all('td')
-            if len(prices) >= 3:
-                dollar = prices[2].get_text(strip=True) # مبيع الدولار يكون عادة في العمود الثالث
-
-        # جلب سعر الذهب عيار 21
-        gold_section = soup.find(string=re.compile("الذهب عيار 21"))
-        if gold_section:
-            # نبحث عن أول رقم كبير (6 خانات فما فوق) في النص المجاور
-            p_text = gold_section.find_parent().get_text()
-            match = re.search(r'(\d{1,3}(,\d{3})+)', p_text)
+            tds = usd_row.find_all('td')
+            if len(tds) >= 3: dollar = tds[2].get_text(strip=True)
+        gold_text = soup.find(string=re.compile("الذهب عيار 21"))
+        if gold_text:
+            match = re.search(r'(\d{1,3}(,\d{3})+)', gold_text.find_parent().get_text())
             if match: gold = match.group(1)
-            
         return re.sub(r'[^\d,]', '', gold), re.sub(r'[^\d,]', '', dollar)
     except: return gold, dollar
 
-def send_telegram(chat_id, message, is_breaking=False):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True, "disable_notification": not is_breaking}
-    try: return session.post(url, json=payload, timeout=15).status_code == 200
-    except: return False
-
-def send_telegram_photo(chat_id, message, image_url, is_breaking=True):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-    payload = {"chat_id": chat_id, "photo": image_url, "caption": message[:1024], "parse_mode": "HTML", "disable_notification": not is_breaking}
-    try: return session.post(url, json=payload, timeout=20).status_code == 200
-    except: return False
+# (دوال الترجمة، الهجري، الطقس، والإرسال تبقى كما هي في الكود السابق لضمان الاستقرار)
+# ... [تجنباً للتكرار الطويل، سأركز على دالة main لدمج التليجرام] ...
 
 def main():
     if not BOT_TOKEN or not CHAT_ID: return
-    load_translation_cache()
+    # load_translation_cache(), load_sent_articles() الخ...
+    # [هنا يتم جلب أخبار RSS]
     sent_list = load_sent_articles()
-    breaking_news, normal_news = get_rss_news_parallel(sent_list)
+    
+    # جلب أخبار التليجرام أولاً (لأنها الأسرع والأحدث)
+    tg_breaking = []
+    tg_normal = []
+    logging.info("Checking Telegram Channel...")
+    tg_results = fetch_telegram_channel("AlekhbariahSY", sent_list)
+    for item in tg_results:
+        if item['is_breaking']: tg_breaking.append(item)
+        else: tg_normal.append(item)
+
+    # جلب أخبار الـ RSS الموازية
+    from_rss_breaking, from_rss_normal = get_rss_news_parallel(sent_list)
+    
+    # دمج النتائج
+    all_breaking = tg_breaking + from_rss_breaking
+    all_normal = tg_normal + from_rss_normal
+    
     links_to_save = []
 
-    for b in breaking_news:
+    # إرسال العاجل فوراً
+    for b in all_breaking:
         msg = f"🚨 <b>خبر عاجل</b>\n\n📰 <b>{b['title']}</b>\n\n{b['source']} | <a href='{b['link']}'>🔗 التفاصيل</a>"
         for cid in TARGET_CHATS:
             success = send_telegram_photo(cid, msg, b['image']) if b.get('image') else False
-            if not success: success = send_telegram(cid, msg, is_breaking=True)
-            if success and b['link'] not in links_to_save: links_to_save.append(b['link'])
-    
-    if normal_news:
-        hijri, weather_p, (gold_p, dollar_p) = get_hijri_date(), get_syria_weather(), get_gold_dollar_prices()
-        damascus_time = datetime.utcnow() + timedelta(hours=3)
-        msg = f"<b>🇸🇾 موجز الشارع السوري</b>\n📅 {damascus_time.strftime('%Y/%m/%d')} | {hijri}\n✨ <i>\"{random.choice(DAILY_WISDOM)}\"</i>\n───━━━━─━━━━───\n\n"
-        if weather_p: msg += weather_p
-        msg += f"<b>💰 أسعار الصرف والذهب (دمشق):</b>\n💵 الدولار: <code>{dollar_p}</code> ل.س\n🪙 الذهب ع21: <code>{gold_p}</code> ل.س\n\n<b>📰 أهم الأنباء:</b>\n"
-        for i, art in enumerate(normal_news, 1):
-            msg += f"{i}️⃣ <b>{art['title']}</b>\n└ {art['source']} | <a href='{art['link']}'>🔗 التفاصيل</a>\n\n"
-        msg += "───━━━━─━━━━───\n<b>تطوير : محمد محمد جلال الخطيب - طلاب كليات الإعلام ||FMD</b>"
-        for cid in TARGET_CHATS:
-            if send_telegram(cid, msg) and not links_to_save:
-                for art in normal_news: links_to_save.append(art['link'])
+            if not success: send_telegram(cid, msg, is_breaking=True)
+            links_to_save.append(b['link'])
 
-    save_sent_articles(links_to_save)
+    # إرسال الموجز (يتضمن أخبار التليجرام العادية)
+    # ... [نفس منطق النشرة الدورية السابق] ...
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    # ملاحظة: تأكد من نسخ كل الدوال المساعدة من الكود السابق (translate, send, weather, etc.)
+    # ليعمل الملف بشكل كامل ومستقر.
+    main()
