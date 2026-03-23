@@ -22,7 +22,7 @@ CHANNEL_ID = "-1003803988944"
 TARGET_CHATS = [CHAT_ID, CHANNEL_ID]
 DB_FILE = "sent_articles.txt"
 CACHE_FILE = "translation_cache.txt"
-TIMEOUT = 15
+TIMEOUT = 11
 
 session = requests.Session()
 session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
