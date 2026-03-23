@@ -225,7 +225,7 @@ def main():
         msg += get_syria_weather() + "<b>📰 أهم الأنباء والمراسيم:</b>\n"
         for i, a in enumerate(all_nrm[:15], 1):
             msg += f"{i}️⃣ <b>{a['title']}</b>\n└ {a['source']} | <a href='{a['link']}'>🔗 التفاصيل</a>\n\n"
-        msg += "───━━━━─━━━━───\n<b>تم التطوير بواسطة: محمد محمد جلال الخطيب</b>"
+        msg += "───━━━━─━━━━───\n<b>تم التطوير بواسطة: محمد محمد جلال الخطيب\nطلاب كليات الاعلام ||FMD</b>"
         for cid in TARGET_CHATS:
             if send_telegram_msg(cid, msg):
                 for a in all_nrm[:15]: links_to_save.append(a['link'])
