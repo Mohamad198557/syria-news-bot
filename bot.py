@@ -211,7 +211,7 @@ def get_syria_weather():
 
 def get_gold_dollar_prices():
     """ استخراج الأسعار من موقع 'الليرة اليوم' بدقة """
-    gold, dollar = "1,515,000", "14,850" # قيم افتراضية
+    gold, dollar = "1,435,000", "12,000" # قيم افتراضية
     try:
         r = session.get("https://sp-today.com/city/damascus", timeout=12)
         soup = BeautifulSoup(r.text, 'html.parser')
