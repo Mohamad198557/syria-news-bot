@@ -59,6 +59,10 @@ RSS_FEEDS = [
     "https://aawsat.com/rss-feed",  # الشرق الأوسط
     "https://www.alarabiya.net/.mrss/ar/middle-east.xml" # العربية
 ]
+RSS_FEEDS = [
+    "https://news.google.com/rss/search?q=site:reuters.com+languagedirectory:ar&hl=ar&gl=AE&ceid=AE:ar",
+    # ... باقي المصادر
+]
 
 DAILY_WISDOM = [
     "الخوف من التعب تعب، والإقدام على التعب راحة.",
@@ -128,6 +132,14 @@ def translate_text(text):
         save_translation_to_cache(text, translation)
         return translation
     except: return text
+
+@lru_cache(maxsize=128)
+def get_source_name(url):
+    sources = {
+        "reuters.com": "🇬🇧 رويترز",
+        # ... باقي المصادر
+    }
+    return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة أنباء")
 
 @lru_cache(maxsize=128)
 def get_source_name(url):
