@@ -37,19 +37,27 @@ KEYWORDS_SYRIA = [
     "درعا", "Daraa", "القنيطرة", "Quneitra", "ريف دمشق"
 ]
 
-BREAKING_KEYWORDS = ["عاجل", "Breaking", "Urgent", "فوري", "Alert"]
+# الكلمات الساخنة لاصطياد الأخبار العاجلة الحقيقية
+BREAKING_KEYWORDS = [
+    "عاجل", "Breaking", "Urgent", "فوري", "Alert",
+    "انفجار", "اغتيال", "مقتل", "هجوم", "قصف", "غارة", 
+    "اشتباكات", "مرسوم", "إقالة", "زلزال", "هزة أرضية",
+    "سقوط", "استهداف", "طيران", "مسيرة", "مفخخة"
+]
 
-# مصادر الأخبار المختارة بعناية (الأكثر غزارة واستقراراً)
+# المصادر الشاملة (19 مصدراً متضمنة رويترز عربي، يورونيوز، ومصادر الإمارات)
 RSS_FEEDS = [
+    "https://news.google.com/rss/search?q=site:reuters.com+languagedirectory:ar&hl=ar&gl=AE&ceid=AE:ar", # رويترز عربي
     "https://arabic.rt.com/rss/",  # روسيا اليوم
     "https://www.skynewsarabia.com/rss/middle-east.xml",  # سكاي نيوز
     "http://feeds.bbci.co.uk/arabic/rss.xml",  # BBC عربي
     "https://www.france24.com/ar/rss",  # فرانس 24 عربي
     "https://arabic.euronews.com/rss?level=vertical&name=news",  # يورونيوز عربي
-    "https://www.dubaicanvas.ae/feed/", # دبي (أخبار عامة/منوعة)
-    "https://www.albayan.ae/rss-feeds-1.2587", # البيان الإماراتية (دبي)
-    "https://www.emaratalyoum.com/rss-feeds-1.2483", # الإمارات اليوم (دبي)
-    "https://www.alittihad.ae/rss", # الاتحاد (أبوظبي)
+    "https://www.dubaicanvas.ae/feed/", # دبي (أخبار منوعة)
+    "https://www.albayan.ae/rss-feeds-1.2587", # البيان الإماراتية
+    "https://www.emaratalyoum.com/rss-feeds-1.2483", # الإمارات اليوم
+    "https://www.alittihad.ae/rss", # الاتحاد أبوظبي
+    "https://www.almayadeen.net/rss",  # الميادين
     "https://www.enabbaladi.net/feed/",  # عنب بلدي
     "https://alwatan.sy/feed",  # جريدة الوطن السورية
     "https://sana.sy/?feed=rss2",  # سانا
@@ -58,10 +66,6 @@ RSS_FEEDS = [
     "https://alikhbariah.com/feed/",  # الإخبارية
     "https://aawsat.com/rss-feed",  # الشرق الأوسط
     "https://www.alarabiya.net/.mrss/ar/middle-east.xml" # العربية
-]
-RSS_FEEDS = [
-    "https://news.google.com/rss/search?q=site:reuters.com+languagedirectory:ar&hl=ar&gl=AE&ceid=AE:ar",
-    # ... باقي المصادر
 ]
 
 DAILY_WISDOM = [
@@ -136,22 +140,30 @@ def translate_text(text):
 @lru_cache(maxsize=128)
 def get_source_name(url):
     sources = {
-        "reuters.com": "🇬🇧 رويترز",
-        # ... باقي المصادر
+        "reuters.com": "🇬🇧 رويترز", "sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", 
+        "enabbaladi": "🍇 عنب بلدي", "alwatan.sy": "📰 الوطن السورية", "syriasteps": "🇸🇾 سيريا ستيبس", 
+        "arabic.rt.com": "🇷🇺 روسيا اليوم", "skynewsarabia": "🔵 سكاي نيوز", "bbci.co.uk": "🔴 BBC عربي", 
+        "france24.com": "🇫🇷 فرانس 24", "almayadeen": "🟠 الميادين", "aawsat": "🗞️ الشرق الأوسط", 
+        "alarabiya": "🟩 العربية", "euronews": "🇪🇺 يورونيوز", "albayan": "🇦🇪 البيان", 
+        "emaratalyoum": "🇦🇪 الإمارات اليوم", "alittihad": "🇦🇪 الاتحاد"
     }
     return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة أنباء")
 
-@lru_cache(maxsize=128)
-def get_source_name(url):
-    sources = {
-        "sana.sy": "🇸🇾 سانا", "syria.tv": "📺 تلفزيون سوريا", "enabbaladi": "🍇 عنب بلدي",
-        "alwatan.sy": "📰 الوطن السورية", "syriasteps": "🇸🇾 سيريا ستيبس", "arabic.rt.com": "🇷🇺 روسيا اليوم",
-        "skynewsarabia": "🔵 سكاي نيوز", "bbci.co.uk": "🔴 BBC عربي", "france24.com": "🇫🇷 فرانس 24",
-         "aawsat": "🗞️ الشرق الأوسط", "alarabiya": "🟩 العربية",
-        "euronews": "🇪🇺 يورونيوز", "albayan": "🇦🇪 البيان (دبي)", "emaratalyoum": "🇦🇪 الإمارات اليوم",
-        "alittihad": "🇦🇪 الاتحاد (أبوظبي)"
-    }
-    return next((name for key, name in sources.items() if key in url.lower()), "📰 وكالة أنباء")
+def get_image_url(entry):
+    """استخراج رابط الصورة من الخبر إن وجد"""
+    try:
+        if 'media_content' in entry and len(entry.media_content) > 0:
+            return entry.media_content[0].get('url')
+        if 'links' in entry:
+            for link in entry.links:
+                if 'image' in link.get('type', ''):
+                    return link.get('href')
+        if 'summary' in entry:
+            soup = BeautifulSoup(entry.summary, 'html.parser')
+            img = soup.find('img')
+            if img: return img.get('src')
+    except: pass
+    return None
 
 def fetch_feed(feed_url, sent_list):
     breaking, normal = [], []
@@ -174,7 +186,9 @@ def fetch_feed(feed_url, sent_list):
                 full_txt = f"{title_or} {title_ar} {summary}".lower()
                 
                 if any(k.lower() in full_txt for k in KEYWORDS_SYRIA):
-                    data = {'title': title_ar[:125].strip(), 'link': link, 'source': source}
+                    img_url = get_image_url(entry)
+                    data = {'title': title_ar[:125].strip(), 'link': link, 'source': source, 'image': img_url}
+                    
                     if any(bk.lower() in full_txt for bk in BREAKING_KEYWORDS):
                         breaking.append(data)
                     else:
@@ -192,7 +206,7 @@ def get_rss_news_parallel(sent_list):
                 breaking, normal = future.result()
                 breaking_all.extend(breaking)
                 normal_all.extend(normal)
-                if len(normal_all) >= 15: break # رفعنا سقف الأخبار قليلاً
+                if len(normal_all) >= 15: break 
             except: pass
     return breaking_all, normal_all[:15]
 
@@ -241,11 +255,28 @@ def get_gold_dollar_prices():
     except: return "1,517,000", "11,950"
 
 def send_telegram(chat_id, message, is_breaking=False):
+    """إرسال رسالة نصية"""
     if not chat_id: return False
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True, "disable_notification": not is_breaking}
     try:
         r = session.post(url, json=payload, timeout=15)
+        return r.status_code == 200
+    except: return False
+
+def send_telegram_photo(chat_id, message, image_url, is_breaking=True):
+    """إرسال رسالة مع صورة"""
+    if not chat_id or not image_url: return False
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    payload = {
+        "chat_id": chat_id, 
+        "photo": image_url, 
+        "caption": message[:1024], # تليجرام يقبل 1024 حرف كحد أقصى للوصف
+        "parse_mode": "HTML", 
+        "disable_notification": not is_breaking
+    }
+    try:
+        r = session.post(url, json=payload, timeout=20)
         return r.status_code == 200
     except: return False
 
@@ -261,14 +292,22 @@ def main():
     breaking_news, normal_news = get_rss_news_parallel(sent_list)
     links_to_save = []
 
-    # 1. الأخبار العاجلة
+    # 1. إرسال الأخبار العاجلة (مع محاولة إرفاق صورة)
     for b in breaking_news:
         msg = f"🚨 <b>خبر عاجل</b>\n\n📰 <b>{b['title']}</b>\n\n{b['source']} | <a href='{b['link']}'>🔗 التفاصيل</a>"
         for cid in TARGET_CHATS: 
-            if send_telegram(cid, msg, is_breaking=True):
-                if b['link'] not in links_to_save: links_to_save.append(b['link'])
+            success = False
+            # محاولة الإرسال مع صورة أولاً
+            if b.get('image'):
+                success = send_telegram_photo(cid, msg, b['image'], is_breaking=True)
+            # إذا فشلت الصورة أو لم تكن موجودة، نرسل نصاً كالمعتاد (Fallback)
+            if not success:
+                success = send_telegram(cid, msg, is_breaking=True)
+                
+            if success and b['link'] not in links_to_save: 
+                links_to_save.append(b['link'])
     
-    # 2. النشرة الدورية
+    # 2. إرسال النشرة الدورية (نصية ومجمعة كما هي)
     if normal_news:
         hijri = get_hijri_date()
         wisdom = random.choice(DAILY_WISDOM)
@@ -302,6 +341,7 @@ def main():
             for art in normal_news:
                 if art['link'] not in links_to_save: links_to_save.append(art['link'])
 
+    # حفظ كل ما تم إرساله لعدم التكرار
     save_sent_articles(links_to_save)
     logging.info("تم إنهاء النشرة بنجاح.")
 
