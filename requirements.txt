@@ -1,5 +1,1 @@
-requests
-feedparser
-beautifulsoup4
-deep-translator
-python-weather
+# Python 3.11+ standard library only; no pip packages required.
